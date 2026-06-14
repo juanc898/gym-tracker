@@ -1,0 +1,835 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="theme-color" content="#ffffff">
+<title>Gym Tracker — Juan Carlos</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@2.44.0/tabler-icons.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+  :root {
+    --bg: #ffffff; --bg2: #f5f5f4; --bg3: #e8e6e1;
+    --text: #1a1a18; --text2: #6b6b67; --border: #e0ddd7;
+    --green: #1D9E75; --green-light: rgba(29,158,117,.12);
+    --red-bg: #FCEBEB; --red: #791F1F; --red-border: #F7C1C1;
+    --radius: 12px; --radius-sm: 8px;
+    --shadow: 0 1px 3px rgba(0,0,0,.08);
+  }
+  @media(prefers-color-scheme:dark){
+    :root{--bg:#1c1c1e;--bg2:#2c2c2e;--bg3:#3a3a3c;--text:#f5f5f0;--text2:#aeaead;--border:#3a3a3c;}
+  }
+  *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+  body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:var(--bg2);color:var(--text);min-height:100vh;padding-bottom:80px}
+  /* NAV */
+  .nav{display:flex;border-bottom:1px solid var(--border);background:var(--bg);position:sticky;top:0;z-index:50;overflow-x:auto}
+  .nb{flex:1;padding:12px 8px;font-size:12px;font-weight:500;background:none;border:none;border-bottom:2px solid transparent;cursor:pointer;color:var(--text2);white-space:nowrap;display:flex;flex-direction:column;align-items:center;gap:3px;min-width:60px}
+  .nb i{font-size:18px}
+  .nb.active{color:var(--green);border-bottom-color:var(--green)}
+  /* PAGES */
+  .pg{display:none;padding:16px;max-width:600px;margin:0 auto}
+  .pg.active{display:block}
+  /* CARD */
+  .card{background:var(--bg);border-radius:var(--radius);padding:16px;margin-bottom:12px;box-shadow:var(--shadow)}
+  /* BADGES */
+  .bdg{display:inline-block;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:600;white-space:nowrap}
+  .bp{background:#E6F1FB;color:#0C447C}.bh{background:#FAECE7;color:#712B13}
+  .bt{background:#EEEDFE;color:#3C3489}.bpi{background:#EAF3DE;color:#27500A}
+  .ba{background:#FAEEDA;color:#633806}.be{background:#E1F5EE;color:#085041}
+  .bbi{background:#E6F1FB;color:#0C447C}.bc{background:#EAF3DE;color:#27500A}
+  .bca{background:#F1EFE8;color:#444441}.bok{background:#EAF3DE;color:#27500A}
+  /* INPUTS */
+  input,select,textarea{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px 12px;font-size:15px;color:var(--text);font-family:inherit;width:100%;-webkit-appearance:none}
+  input:focus,select:focus{outline:none;border-color:var(--green)}
+  /* BUTTONS */
+  button{cursor:pointer;font-family:inherit}
+  .btn{padding:10px 16px;border-radius:var(--radius-sm);font-size:14px;font-weight:500;border:1px solid var(--border);background:var(--bg2);color:var(--text)}
+  .btnp{background:var(--green);color:#fff;border-color:transparent}
+  .btnd{background:var(--red-bg);color:var(--red);border-color:var(--red-border)}
+  .btnsm{padding:6px 12px;font-size:13px}
+  .btn-block{width:100%;display:block;margin-top:8px}
+  /* METRICS */
+  .metrics{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:4px}
+  .met{background:var(--bg2);border-radius:var(--radius-sm);padding:12px 8px;text-align:center}
+  .mv{font-size:22px;font-weight:600;color:var(--text)}
+  .mlb{font-size:11px;color:var(--text2);margin-top:2px}
+  /* LISTS */
+  .exrow{display:flex;align-items:flex-start;gap:10px;padding:12px 0;border-bottom:1px solid var(--border)}
+  .exrow:last-child{border-bottom:none}
+  .exn{font-size:14px;font-weight:600;line-height:1.3}
+  .exs{font-size:12px;color:var(--text2);margin-top:3px}
+  .ssep{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--text2);padding:10px 0 4px;border-top:1px solid var(--border);margin-top:4px}
+  .ssep:first-child{border-top:none;padding-top:0}
+  /* HISTORY LIST */
+  .hlist-row{display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--border);cursor:pointer}
+  .hlist-row:last-child{border-bottom:none}
+  .hlist-row:active{background:var(--bg2);margin:0 -16px;padding-left:16px;padding-right:16px}
+  .hlist-name{font-size:14px;font-weight:600;line-height:1.3}
+  .hlist-meta{display:flex;align-items:center;gap:5px;flex-wrap:wrap;margin-top:4px}
+  .hlist-right{display:flex;flex-direction:column;align-items:flex-end;gap:3px;flex-shrink:0}
+  /* CHIPS */
+  .wchip{font-size:11px;padding:2px 7px;border-radius:100px;background:#E6F1FB;color:#0C447C;display:inline-block;font-weight:500}
+  .pr{background:#FAEEDA;color:#633806;font-size:11px;padding:2px 6px;border-radius:6px;font-weight:600}
+  .hpill{font-size:12px;color:var(--text2)}
+  /* MODAL */
+  .mdbg{position:fixed;inset:0;background:rgba(0,0,0,.55);display:flex;align-items:flex-end;justify-content:center;z-index:99;padding:0}
+  .mdl{background:var(--bg);border-radius:var(--radius) var(--radius) 0 0;padding:20px;width:100%;max-width:600px;max-height:90vh;overflow-y:auto}
+  .mhdr{font-size:16px;font-weight:600;margin-bottom:6px;display:flex;align-items:flex-start;justify-content:space-between;gap:8px}
+  .xbtn{background:none;border:none;font-size:24px;cursor:pointer;color:var(--text2);line-height:1;flex-shrink:0;padding:0 0 0 8px}
+  /* SETS */
+  .srow{display:flex;gap:8px;align-items:center;margin-bottom:10px}
+  .slbl{font-size:13px;color:var(--text2);min-width:46px;font-weight:500}
+  .srow input{flex:1}
+  /* HISTORY ROWS (in modals) */
+  .hrow{font-size:13px;padding:8px 0;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px}
+  .hrow:last-child{border-bottom:none}
+  /* DAY TABS */
+  .day-tabs{display:flex;gap:6px;flex-wrap:wrap;margin-top:12px}
+  .dtab{padding:7px 14px;border-radius:var(--radius-sm);font-size:13px;font-weight:500;border:1px solid var(--border);background:none;cursor:pointer;color:var(--text2)}
+  .dtab.active{background:var(--text);color:var(--bg);border-color:transparent}
+  /* UPLOAD */
+  .uzone{border:2px dashed var(--border);border-radius:var(--radius);padding:28px;text-align:center;cursor:pointer;background:var(--bg2)}
+  .uzone:active{border-color:var(--green);background:var(--green-light)}
+  /* CONFIRM BOX */
+  .cbox{background:var(--red-bg);border:1px solid var(--red-border);border-radius:var(--radius-sm);padding:14px;margin-top:10px}
+  /* WEEK ROWS */
+  .wrow{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--border)}
+  .wrow:last-child{border-bottom:none}
+  /* SEARCH */
+  .sw{position:relative;margin-bottom:12px}
+  .sw input{padding-left:36px;font-size:15px}
+  .sic{position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--text2);font-size:18px;pointer-events:none}
+  /* MF BUTTONS */
+  .mf-wrap{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px;overflow-x:auto;padding-bottom:4px}
+  /* CHART */
+  .chart-container{position:relative;width:100%;height:180px;margin-bottom:12px}
+  /* NOTIFICATION */
+  .ntf{position:fixed;bottom:90px;left:50%;transform:translateX(-50%);background:var(--text);color:var(--bg);padding:12px 22px;border-radius:100px;font-size:13px;font-weight:500;z-index:999;opacity:0;transition:.3s;white-space:nowrap;pointer-events:none;box-shadow:0 4px 16px rgba(0,0,0,.2)}
+  /* UTILS */
+  .ttl{font-size:17px;font-weight:700;margin-bottom:10px}
+  .mu{color:var(--text2);font-size:14px}
+  .g2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .g3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
+  .mt8{margin-top:8px}.mt12{margin-top:12px}.mt16{margin-top:16px}
+  .flex-row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+</style>
+</head>
+<body>
+
+<nav class="nav">
+  <button class="nb active" onclick="showPage('upload',this)"><i class="ti ti-upload"></i>PDFs</button>
+  <button class="nb" onclick="showPage('workout',this)"><i class="ti ti-dumbbell"></i>Rutina</button>
+  <button class="nb" onclick="showPage('history',this)"><i class="ti ti-history"></i>Historial</button>
+  <button class="nb" onclick="showPage('weight',this)"><i class="ti ti-scale"></i>Mi peso</button>
+</nav>
+
+<!-- UPLOAD PAGE -->
+<div id="pg-upload" class="pg active">
+  <div class="card">
+    <div class="ttl">Subir plan de entrenamiento</div>
+    <p class="mu" style="margin-bottom:14px">El sistema detecta el número de semana del nombre del archivo automáticamente.</p>
+    <div class="uzone" onclick="document.getElementById('pdfIn').click()">
+      <i class="ti ti-file-type-pdf" style="font-size:40px;color:var(--text2);display:block;margin-bottom:8px"></i>
+      <div style="font-weight:600;margin-bottom:4px">Toca para seleccionar PDF</div>
+      <div class="mu" style="font-size:13px">Plan_Semana_1.pdf · Semana_2.pdf · etc.</div>
+    </div>
+    <input type="file" id="pdfIn" accept=".pdf" style="display:none" onchange="handleUpload(this)">
+    <div id="uploadMsg" style="display:none;margin-top:12px">
+      <div id="uploadMsgText" style="font-size:14px;margin-bottom:12px;line-height:1.5"></div>
+      <div class="g2" style="margin-bottom:10px">
+        <div><div class="mu" style="margin-bottom:4px;font-size:13px">Número de semana</div>
+          <input type="number" id="manualWk" min="1" max="52" placeholder="ej. 1"></div>
+        <div style="display:flex;flex-direction:column;gap:6px;justify-content:flex-end">
+          <button class="btn btnp" onclick="confirmUpload()">Cargar</button>
+          <button class="btn btnsm" onclick="cancelUpload()">Cancelar</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card" id="cLoaded" style="display:none">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+      <div class="ttl" style="margin:0">Rutinas cargadas</div>
+      <button class="btn btnsm btnd" onclick="toggleC('delAll')"><i class="ti ti-trash"></i></button>
+    </div>
+    <div id="loadedList"></div>
+    <div id="delAll" style="display:none" class="cbox mt12">
+      <div style="font-size:14px;font-weight:600;margin-bottom:6px">¿Borrar todas las semanas?</div>
+      <div class="mu" style="margin-bottom:10px;font-size:13px">Los registros se conservan.</div>
+      <div class="flex-row">
+        <button class="btn btnsm btnd" onclick="deleteAllWeeks()">Sí, borrar todas</button>
+        <button class="btn btnsm" onclick="toggleC('delAll')">Cancelar</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="card" id="cStats" style="display:none">
+    <div class="ttl">Estadísticas generales</div>
+    <div class="metrics">
+      <div class="met"><div class="mv" id="stW">0</div><div class="mlb">Semanas</div></div>
+      <div class="met"><div class="mv" id="stE">0</div><div class="mlb">Ejercicios</div></div>
+      <div class="met"><div class="mv" id="stL">0</div><div class="mlb">Registros</div></div>
+      <div class="met"><div class="mv" id="stP">0</div><div class="mlb">PRs 🏆</div></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="ttl" style="color:var(--red)">Zona de peligro</div>
+    <p class="mu" style="margin-bottom:12px;font-size:13px">Borra todos los datos incluyendo registros y peso.</p>
+    <button class="btn btnd" onclick="toggleC('resetAll')"><i class="ti ti-refresh"></i> Resetear todo</button>
+    <div id="resetAll" style="display:none" class="cbox mt12">
+      <div style="font-size:14px;font-weight:600;color:var(--red);margin-bottom:6px">⚠️ ¿Estás seguro?</div>
+      <div class="mu" style="margin-bottom:10px;font-size:13px">Se borrarán <b>todos</b> los planes, registros y datos de peso. No se puede deshacer.</div>
+      <div class="flex-row">
+        <button class="btn btnsm btnd" onclick="doReset()">Sí, borrar todo</button>
+        <button class="btn btnsm" onclick="toggleC('resetAll')">Cancelar</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- WORKOUT PAGE -->
+<div id="pg-workout" class="pg">
+  <div class="card">
+    <div class="ttl">Selecciona semana</div>
+    <select id="wkSel" onchange="loadDays()"><option value="">— Semana —</option></select>
+    <div class="day-tabs" id="dayTabs"></div>
+  </div>
+  <div id="wkEx"></div>
+</div>
+
+<!-- HISTORY PAGE -->
+<div id="pg-history" class="pg">
+  <div class="sw">
+    <i class="ti ti-search sic"></i>
+    <input type="text" id="srch" placeholder="Buscar ejercicio..." oninput="renderHistory()">
+  </div>
+  <div class="mf-wrap" id="mfBtns"></div>
+  <div class="card" style="padding:0 16px">
+    <div id="histList"></div>
+  </div>
+</div>
+
+<!-- WEIGHT PAGE -->
+<div id="pg-weight" class="pg">
+  <div class="card">
+    <div class="ttl">Registrar peso semanal</div>
+    <div class="g2" style="margin-bottom:10px">
+      <div><div class="mu" style="margin-bottom:4px;font-size:13px">Fecha</div><input type="date" id="wDate"></div>
+      <div><div class="mu" style="margin-bottom:4px;font-size:13px">Peso (kg)</div><input type="number" id="wKg" placeholder="82.5" step="0.1" min="30" max="300"></div>
+    </div>
+    <div style="margin-bottom:12px"><div class="mu" style="margin-bottom:4px;font-size:13px">Notas</div><input type="text" id="wNotes" placeholder="Opcional..."></div>
+    <button class="btn btnp btn-block" onclick="saveWeight()"><i class="ti ti-check"></i> Guardar peso</button>
+  </div>
+  <div class="card">
+    <div class="ttl">Evolución de peso corporal</div>
+    <div id="wChart"><div style="text-align:center;padding:24px;color:var(--text2);font-size:14px">Sin registros aún</div></div>
+    <div id="wLog" style="margin-top:8px"></div>
+  </div>
+</div>
+
+<!-- MODAL: registrar ejercicio -->
+<div id="mdLog" style="display:none" class="mdbg" onclick="if(event.target===this)closeM('mdLog')">
+<div class="mdl">
+  <div class="mhdr"><span id="mlName"></span><button class="xbtn" onclick="closeM('mdLog')">×</button></div>
+  <div id="mlBadge" style="margin-bottom:12px"></div>
+  <div id="mlHist"></div>
+  <div style="font-size:14px;font-weight:600;margin-bottom:6px">Registrar hoy</div>
+  <div id="mlHint" style="margin-bottom:10px"></div>
+  <div id="mlSets"></div>
+  <div class="flex-row mt16">
+    <button class="btn" id="mlAdd" onclick="addSet()" style="flex:1"><i class="ti ti-plus"></i> Set</button>
+    <button class="btn btnp" onclick="saveLog()" style="flex:2">Guardar <i class="ti ti-check"></i></button>
+  </div>
+</div>
+</div>
+
+<!-- MODAL: editar registro -->
+<div id="mdEdit" style="display:none" class="mdbg" onclick="if(event.target===this)closeM('mdEdit')">
+<div class="mdl">
+  <div class="mhdr"><span id="meName" style="font-size:14px;line-height:1.3"></span><button class="xbtn" onclick="closeM('mdEdit')">×</button></div>
+  <div id="meBadge" style="margin-bottom:12px"></div>
+  <div style="font-size:14px;font-weight:600;margin-bottom:10px">Editar registro</div>
+  <div id="meSets"></div>
+  <div class="flex-row mt16">
+    <button class="btn btnd" onclick="deleteLog()" style="flex:1"><i class="ti ti-trash"></i> Borrar</button>
+    <button class="btn btnp" onclick="updateLog()" style="flex:2">Guardar cambios</button>
+  </div>
+</div>
+</div>
+
+<!-- MODAL: detalle + gráfica -->
+<div id="mdDetail" style="display:none" class="mdbg" onclick="if(event.target===this)closeM('mdDetail')">
+<div class="mdl">
+  <div class="mhdr"><span id="mdName" style="font-size:15px;font-weight:700;line-height:1.3"></span><button class="xbtn" onclick="closeM('mdDetail')">×</button></div>
+  <div id="mdBadge" style="margin-bottom:10px"></div>
+  <div id="mdChartWrap" class="chart-container" style="display:none">
+    <canvas id="mdCanvas" role="img" aria-label="Gráfica de progreso"></canvas>
+  </div>
+  <div id="mdLogs"></div>
+</div>
+</div>
+
+<div class="ntf" id="ntf"></div>
+
+<script>
+// ─── EXERCISE DATA — ALL 3 WEEKS ──────────────────────────────────────────────
+const PLANS = {
+  1:{week:1,days:[
+    {label:'Día 1',name:'Pecho + Hombro + Tríceps + Cardio',sections:[
+      {title:'Calentamiento',type:'warmup',exercises:[
+        {name:'Bike Machine',muscle:'Calentamiento',sets:3,reps:'2 min',isCardio:false},
+        {name:'Push Up',muscle:'Calentamiento',sets:3,reps:'15',isCardio:false},
+        {name:'X Man Crunches',muscle:'Calentamiento',sets:3,reps:'15',isCardio:false},
+      ]},
+      {title:'Pecho',type:'strength',exercises:[
+        {name:'Bench Press',muscle:'Pecho',sets:3,reps:'10-12',isCardio:false},
+        {name:'Incline Smith Machine Bench Press',muscle:'Pecho',sets:3,reps:'10-12',isCardio:false},
+      ]},
+      {title:'Hombro',type:'strength',exercises:[
+        {name:'Chest Supported Dumbbell Frontal Raise',muscle:'Hombro',sets:3,reps:'10-12',isCardio:false},
+        {name:'Single Arm Cable Lateral Raise',muscle:'Hombro',sets:3,reps:'10-12',isCardio:false},
+      ]},
+      {title:'Tríceps',type:'strength',exercises:[
+        {name:'Bar Overhead Extension',muscle:'Tríceps',sets:3,reps:'10-12',isCardio:false},
+        {name:'Unilateral Tricep',muscle:'Tríceps',sets:3,reps:'10-12',isCardio:false},
+      ]},
+      {title:'Cardio',type:'cardio',exercises:[
+        {name:'HIIT (Caminadora-bicicleta, etc.)',muscle:'Cardio',sets:1,reps:'15 min',isCardio:true},
+      ]},
+    ]},
+    {label:'Día 2',name:'Pierna + Cardio',sections:[
+      {title:'Calentamiento',type:'warmup',exercises:[
+        {name:'Elliptical Machine',muscle:'Calentamiento',sets:3,reps:'2 min',isCardio:false},
+        {name:'Good Morning',muscle:'Calentamiento',sets:3,reps:'15',isCardio:false},
+        {name:'Dynamic Side Plank',muscle:'Calentamiento',sets:3,reps:'15',isCardio:false},
+      ]},
+      {title:'Pierna',type:'strength',exercises:[
+        {name:'Deadlift',muscle:'Pierna',sets:3,reps:'10-12',isCardio:false},
+        {name:'Single Leg Press',muscle:'Pierna',sets:3,reps:'10-12',isCardio:false},
+        {name:'Smith Machine Box Squat',muscle:'Pierna',sets:3,reps:'10-12',isCardio:false},
+        {name:'Cable Step Up',muscle:'Pierna',sets:3,reps:'10-12',isCardio:false},
+        {name:'Double Db Sumo Squat',muscle:'Pierna',sets:3,reps:'10-12',isCardio:false},
+        {name:'Standing Calf Raise Machine',muscle:'Pierna',sets:4,reps:'12-15',isCardio:false},
+      ]},
+      {title:'Cardio',type:'cardio',exercises:[
+        {name:'LISS (Caminadora, bici, remo, etc.)',muscle:'Cardio',sets:1,reps:'20-30 min',isCardio:true},
+      ]},
+    ]},
+    {label:'Día 3',name:'Abs + Espalda + Bíceps + Cardio',sections:[
+      {title:'Abs',type:'strength',exercises:[
+        {name:'Side Lying V Up',muscle:'Abs',sets:3,reps:'15',isCardio:false},
+        {name:'Side Plank Knee to Elbow',muscle:'Abs',sets:3,reps:'15',isCardio:false},
+        {name:'Weighted Decline Crunches',muscle:'Abs',sets:3,reps:'15',isCardio:false},
+      ]},
+      {title:'Espalda',type:'strength',exercises:[
+        {name:'Unilateral Landmine',muscle:'Espalda',sets:3,reps:'10-12',isCardio:false},
+        {name:'Incline Supinated Dumbbell',muscle:'Espalda',sets:3,reps:'10-12',isCardio:false},
+        {name:'Kneeling Crossover Pulldown',muscle:'Espalda',sets:3,reps:'10-12',isCardio:false},
+        {name:'Unilateral Hammer',muscle:'Espalda',sets:3,reps:'10-12',isCardio:false},
+      ]},
+      {title:'Bíceps',type:'strength',exercises:[
+        {name:'Isometric Alternating Db Curl',muscle:'Bíceps',sets:3,reps:'10-12',isCardio:false},
+        {name:'Pronated Cable Curl',muscle:'Bíceps',sets:3,reps:'10-12',isCardio:false},
+      ]},
+      {title:'Cardio',type:'cardio',exercises:[
+        {name:'HIIT (Caminadora-bicicleta, etc.)',muscle:'Cardio',sets:1,reps:'15 min',isCardio:true},
+      ]},
+    ]},
+    {label:'Día 4',name:'Pierna + Cardio',sections:[
+      {title:'Calentamiento',type:'warmup',exercises:[
+        {name:'Treadmill Machine',muscle:'Calentamiento',sets:3,reps:'2 min',isCardio:false},
+        {name:'Single Leg Deadlift',muscle:'Calentamiento',sets:3,reps:'15',isCardio:false},
+        {name:'Bird Dog',muscle:'Calentamiento',sets:3,reps:'15',isCardio:false},
+      ]},
+      {title:'Pierna',type:'strength',exercises:[
+        {name:'Smith Machine Deadlift',muscle:'Pierna',sets:3,reps:'10-12',isCardio:false},
+        {name:'Leg Extension',muscle:'Pierna',sets:3,reps:'10-12',isCardio:false},
+        {name:'Barbell Box Squat',muscle:'Pierna',sets:3,reps:'10-12',isCardio:false},
+        {name:'Barbell Forward Lunges',muscle:'Pierna',sets:3,reps:'10-12',isCardio:false},
+        {name:'Landmine Sumo Squat',muscle:'Pierna',sets:3,reps:'10-12',isCardio:false},
+        {name:'Leg Press Calf Raises',muscle:'Pierna',sets:4,reps:'12-15',isCardio:false},
+      ]},
+      {title:'Cardio',type:'cardio',exercises:[
+        {name:'LISS (Caminadora, bici, remo, etc.)',muscle:'Cardio',sets:1,reps:'20-30 min',isCardio:true},
+      ]},
+    ]},
+  ]},
+  2:{week:2,days:[
+    {label:'Día 1',name:'Pecho + Hombro + Tríceps + Cardio',sections:[
+      {title:'Calentamiento',type:'warmup',exercises:[
+        {name:'Treadmill Machine',muscle:'Calentamiento',sets:3,reps:'2 min',isCardio:false},
+        {name:'Push Up',muscle:'Calentamiento',sets:3,reps:'15',isCardio:false},
+        {name:'Sit Ups',muscle:'Calentamiento',sets:3,reps:'15',isCardio:false},
+      ]},
+      {title:'Pecho',type:'strength',exercises:[
+        {name:'Dumbbell Fly',muscle:'Pecho',sets:3,reps:'10-12',isCardio:false},
+        {name:'Incline Smith Machine Bench Press',muscle:'Pecho',sets:3,reps:'10-12',isCardio:false},
+      ]},
+      {title:'Hombro',type:'strength',exercises:[
+        {name:'Single Arm Cable Front Raise',muscle:'Hombro',sets:3,reps:'10-12',isCardio:false},
+        {name:'Db Lateral Raise',muscle:'Hombro',sets:3,reps:'10-12',isCardio:false},
+      ]},
+      {title:'Tríceps',type:'strength',exercises:[
+        {name:'Single-Arm Cable Kickback',muscle:'Tríceps',sets:3,reps:'10-12',isCardio:false},
+        {name:'Chest Supported Dual Dumbbell Kickback',muscle:'Tríceps',sets:3,reps:'10-12',isCardio:false},
+      ]},
+      {title:'Cardio',type:'cardio',exercises:[
+        {name:'HIIT (Caminadora-bicicleta, etc.)',muscle:'Cardio',sets:1,reps:'15 min',isCardio:true},
+      ]},
+    ]},
+    {label:'Día 2',name:'Pierna + Cardio',sections:[
+      {title:'Calentamiento',type:'warmup',exercises:[
+        {name:'Bike Machine',muscle:'Calentamiento',sets:3,reps:'2 min',isCardio:false},
+        {name:'Single Leg Deadlift',muscle:'Calentamiento',sets:3,reps:'15',isCardio:false},
+        {name:'45 Degrees Back Extension Machine',muscle:'Calentamiento',sets:3,reps:'15',isCardio:false},
+      ]},
+      {title:'Pierna',type:'strength',exercises:[
+        {name:'Leg Curl',muscle:'Pierna',sets:3,reps:'10-12',isCardio:false},
+        {name:'Smith Machine Back Squat',muscle:'Pierna',sets:3,reps:'10-12',isCardio:false},
+        {name:'Leg Press',muscle:'Pierna',sets:3,reps:'10-12',isCardio:false},
+        {name:'Step Up',muscle:'Pierna',sets:3,reps:'10-12',isCardio:false},
+        {name:'Adduction Machine',muscle:'Pierna',sets:3,reps:'10-12',isCardio:false},
+        {name:'Seated Calf Raises',muscle:'Pierna',sets:4,reps:'12-15',isCardio:false},
+      ]},
+      {title:'Cardio',type:'cardio',exercises:[
+        {name:'LISS (Caminadora, bici, remo, etc.)',muscle:'Cardio',sets:1,reps:'20-30 min',isCardio:true},
+      ]},
+    ]},
+    {label:'Día 3',name:'Abs + Espalda + Bíceps + Cardio',sections:[
+      {title:'Abs',type:'strength',exercises:[
+        {name:'Butterfly Crunch',muscle:'Abs',sets:3,reps:'15',isCardio:false},
+        {name:'Shoulder Taps',muscle:'Abs',sets:3,reps:'15',isCardio:false},
+        {name:'Weighted Sit Up',muscle:'Abs',sets:3,reps:'15',isCardio:false},
+      ]},
+      {title:'Espalda',type:'strength',exercises:[
+        {name:'Close Grip Lat Pull Down',muscle:'Espalda',sets:3,reps:'10-12',isCardio:false},
+        {name:'Incline Bench Wide Grip Barbell',muscle:'Espalda',sets:3,reps:'10-12',isCardio:false},
+        {name:'Single Arm Kneeling High Cable',muscle:'Espalda',sets:3,reps:'10-12',isCardio:false},
+        {name:'Db Bent Over',muscle:'Espalda',sets:3,reps:'10-12',isCardio:false},
+      ]},
+      {title:'Bíceps',type:'strength',exercises:[
+        {name:'Bayesian Cable Curl',muscle:'Bíceps',sets:3,reps:'10-12',isCardio:false},
+        {name:'Zottman Curl',muscle:'Bíceps',sets:3,reps:'10-12',isCardio:false},
+      ]},
+      {title:'Cardio',type:'cardio',exercises:[
+        {name:'HIIT (Caminadora-bicicleta, etc.)',muscle:'Cardio',sets:1,reps:'15 min',isCardio:true},
+      ]},
+    ]},
+    {label:'Día 4',name:'Pierna + Cardio',sections:[
+      {title:'Calentamiento',type:'warmup',exercises:[
+        {name:'Stairmaster Machine',muscle:'Calentamiento',sets:3,reps:'2 min',isCardio:false},
+        {name:'Good Morning',muscle:'Calentamiento',sets:3,reps:'15',isCardio:false},
+        {name:'Mountain Climbers',muscle:'Calentamiento',sets:3,reps:'15',isCardio:false},
+      ]},
+      {title:'Pierna',type:'strength',exercises:[
+        {name:'Barbell Good Morning',muscle:'Pierna',sets:3,reps:'10-12',isCardio:false},
+        {name:'Squat',muscle:'Pierna',sets:3,reps:'10-12',isCardio:false},
+        {name:'Single Leg Press',muscle:'Pierna',sets:3,reps:'10-12',isCardio:false},
+        {name:'Db Bulgarian Split Squat',muscle:'Pierna',sets:3,reps:'10-12',isCardio:false},
+        {name:'Double Db Sumo Squat',muscle:'Pierna',sets:3,reps:'10-12',isCardio:false},
+        {name:'Standing Calf Raise Machine',muscle:'Pierna',sets:4,reps:'12-15',isCardio:false},
+      ]},
+      {title:'Cardio',type:'cardio',exercises:[
+        {name:'LISS (Caminadora, bici, remo, etc.)',muscle:'Cardio',sets:1,reps:'20-30 min',isCardio:true},
+      ]},
+    ]},
+  ]},
+  3:{week:3,days:[
+    {label:'Día 1',name:'Pecho + Hombro + Tríceps + Cardio',sections:[
+      {title:'Calentamiento',type:'warmup',exercises:[
+        {name:'Bike Machine',muscle:'Calentamiento',sets:3,reps:'2 min',isCardio:false},
+        {name:'Push Up',muscle:'Calentamiento',sets:3,reps:'15',isCardio:false},
+        {name:'X Man Crunches',muscle:'Calentamiento',sets:3,reps:'15',isCardio:false},
+      ]},
+      {title:'Pecho',type:'strength',exercises:[
+        {name:'Dumbbell Fly',muscle:'Pecho',sets:3,reps:'10-12',isCardio:false},
+        {name:'Incline Smith Machine Bench Press',muscle:'Pecho',sets:3,reps:'10-12',isCardio:false},
+      ]},
+      {title:'Hombro',type:'strength',exercises:[
+        {name:'Single Arm Cable Front Raise',muscle:'Hombro',sets:3,reps:'10-12',isCardio:false},
+        {name:'Db Lateral Raise',muscle:'Hombro',sets:3,reps:'10-12',isCardio:false},
+      ]},
+      {title:'Tríceps',type:'strength',exercises:[
+        {name:'Single-Arm Cable Kickback',muscle:'Tríceps',sets:3,reps:'10-12',isCardio:false},
+        {name:'Chest Supported Dual Dumbbell Kickback',muscle:'Tríceps',sets:3,reps:'10-12',isCardio:false},
+      ]},
+      {title:'Cardio',type:'cardio',exercises:[
+        {name:'HIIT (Caminadora-bicicleta, etc.)',muscle:'Cardio',sets:1,reps:'15 min',isCardio:true},
+      ]},
+    ]},
+    {label:'Día 2',name:'Pierna + Cardio',sections:[
+      {title:'Calentamiento',type:'warmup',exercises:[
+        {name:'Bike Machine',muscle:'Calentamiento',sets:3,reps:'2 min',isCardio:false},
+        {name:'Single Leg Deadlift',muscle:'Calentamiento',sets:3,reps:'15',isCardio:false},
+        {name:'45 Degrees Back Extension Machine',muscle:'Calentamiento',sets:3,reps:'15',isCardio:false},
+      ]},
+      {title:'Pierna',type:'strength',exercises:[
+        {name:'Leg Curl',muscle:'Pierna',sets:3,reps:'10-12',isCardio:false},
+        {name:'Smith Machine Back Squat',muscle:'Pierna',sets:3,reps:'10-12',isCardio:false},
+        {name:'Leg Press',muscle:'Pierna',sets:3,reps:'10-12',isCardio:false},
+        {name:'Step Up',muscle:'Pierna',sets:3,reps:'10-12',isCardio:false},
+        {name:'Adduction Machine',muscle:'Pierna',sets:3,reps:'10-12',isCardio:false},
+        {name:'Seated Calf Raises',muscle:'Pierna',sets:4,reps:'12-15',isCardio:false},
+      ]},
+      {title:'Cardio',type:'cardio',exercises:[
+        {name:'LISS (Caminadora, bici, remo, etc.)',muscle:'Cardio',sets:1,reps:'20-30 min',isCardio:true},
+      ]},
+    ]},
+    {label:'Día 3',name:'Abs + Espalda + Bíceps + Cardio',sections:[
+      {title:'Abs',type:'strength',exercises:[
+        {name:'Butterfly Crunch',muscle:'Abs',sets:3,reps:'15',isCardio:false},
+        {name:'Shoulder Taps',muscle:'Abs',sets:3,reps:'15',isCardio:false},
+        {name:'Weighted Sit Up',muscle:'Abs',sets:3,reps:'15',isCardio:false},
+      ]},
+      {title:'Espalda',type:'strength',exercises:[
+        {name:'Close Grip Lat Pull Down',muscle:'Espalda',sets:3,reps:'10-12',isCardio:false},
+        {name:'Incline Bench Wide Grip Barbell',muscle:'Espalda',sets:3,reps:'10-12',isCardio:false},
+        {name:'Single Arm Kneeling High Cable',muscle:'Espalda',sets:3,reps:'10-12',isCardio:false},
+        {name:'Db Bent Over',muscle:'Espalda',sets:3,reps:'10-12',isCardio:false},
+      ]},
+      {title:'Bíceps',type:'strength',exercises:[
+        {name:'Bayesian Cable Curl',muscle:'Bíceps',sets:3,reps:'10-12',isCardio:false},
+        {name:'Zottman Curl',muscle:'Bíceps',sets:3,reps:'10-12',isCardio:false},
+      ]},
+      {title:'Cardio',type:'cardio',exercises:[
+        {name:'HIIT (Caminadora-bicicleta, etc.)',muscle:'Cardio',sets:1,reps:'15 min',isCardio:true},
+      ]},
+    ]},
+    {label:'Día 4',name:'Pierna + Cardio',sections:[
+      {title:'Calentamiento',type:'warmup',exercises:[
+        {name:'Stairmaster Machine',muscle:'Calentamiento',sets:3,reps:'2 min',isCardio:false},
+        {name:'Good Morning',muscle:'Calentamiento',sets:3,reps:'15',isCardio:false},
+        {name:'Mountain Climbers',muscle:'Calentamiento',sets:3,reps:'15',isCardio:false},
+      ]},
+      {title:'Pierna',type:'strength',exercises:[
+        {name:'Barbell Good Morning',muscle:'Pierna',sets:3,reps:'10-12',isCardio:false},
+        {name:'Squat',muscle:'Pierna',sets:3,reps:'10-12',isCardio:false},
+        {name:'Single Leg Press',muscle:'Pierna',sets:3,reps:'10-12',isCardio:false},
+        {name:'Db Bulgarian Split Squat',muscle:'Pierna',sets:3,reps:'10-12',isCardio:false},
+        {name:'Double Db Sumo Squat',muscle:'Pierna',sets:3,reps:'10-12',isCardio:false},
+        {name:'Standing Calf Raise Machine',muscle:'Pierna',sets:4,reps:'12-15',isCardio:false},
+      ]},
+      {title:'Cardio',type:'cardio',exercises:[
+        {name:'LISS (Caminadora, bici, remo, etc.)',muscle:'Cardio',sets:1,reps:'20-30 min',isCardio:true},
+      ]},
+    ]},
+  ]}
+};
+
+const BM={Pecho:'bp',Hombro:'bh','Tríceps':'bt',Pierna:'bpi',Abs:'ba',Espalda:'be','Bíceps':'bbi',Cardio:'bc',Calentamiento:'bca'};
+const KEY='gymdb_v7';
+let db={plans:{},logs:{},weights:[]};
+let aplan=null,aday=0,mEx=null,mWk=0,mSets=[],eKey=null,eEx=null,eSets=[],mFilter='',dChart=null;
+
+function lsave(){try{localStorage.setItem(KEY,JSON.stringify(db));}catch(e){alert('Error guardando datos: '+e.message);}}
+function lload(){
+  try{
+    // Try to load from current key
+    const s=localStorage.getItem(KEY);
+    if(s){db=JSON.parse(s);return;}
+    // Migrate from older versions
+    for(const k of ['gymdb_v6','gymdb_v5','gym_v4','gym_v3']){
+      const old=localStorage.getItem(k);
+      if(old){db=JSON.parse(old);lsave();return;}
+    }
+  }catch(e){}
+}
+
+function init(){
+  lload();
+  if(!db.plans)db.plans={};if(!db.logs)db.logs={};if(!db.weights)db.weights=[];
+  document.getElementById('wDate').value=new Date().toISOString().split('T')[0];
+  renderAll();
+}
+function renderAll(){renderLoaded();refreshStats();fillSel();renderHistory();renderWChart();}
+
+function showPage(id,btn){
+  document.querySelectorAll('.pg').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nb').forEach(b=>b.classList.remove('active'));
+  document.getElementById('pg-'+id).classList.add('active');
+  btn.classList.add('active');
+  if(id==='history')renderHistory();
+  if(id==='weight')renderWChart();
+  if(id==='upload'){renderLoaded();refreshStats();}
+}
+
+function detectWeek(fname){
+  const f=fname.toLowerCase().replace(/[_\-]/g,' ');
+  const m=f.match(/semana\s*(\d+)/i)||f.match(/week\s*(\d+)/i)||f.match(/(\d+)/);
+  return m?parseInt(m[1]):0;
+}
+function handleUpload(inp){
+  const file=inp.files[0];if(!file)return;
+  const detected=detectWeek(file.name);
+  const txtEl=document.getElementById('uploadMsgText');
+  if(detected&&PLANS[detected]){
+    txtEl.innerHTML=`<span style="color:#27500A">✓ <b>${file.name}</b> → Semana ${detected} (${countExFromPlan(PLANS[detected])} ejercicios detectados)</span>`;
+  } else if(detected){
+    txtEl.innerHTML=`<span style="color:#633806">⚠️ <b>${file.name}</b> → Semana ${detected} detectada. Verifica el número.</span>`;
+  } else {
+    txtEl.innerHTML=`<span style="color:#633806">⚠️ No se detectó semana en <b>${file.name}</b>. Ingrésala manualmente.</span>`;
+  }
+  document.getElementById('manualWk').value=detected||'';
+  document.getElementById('uploadMsg').style.display='block';
+  inp.value='';
+}
+function countExFromPlan(p){return p.days.reduce((a,d)=>a+d.sections.reduce((b,s)=>b+s.exercises.length,0),0);}
+function countEx(wk){const p=db.plans[wk];if(!p)return 0;return countExFromPlan(p);}
+function confirmUpload(){
+  const wk=parseInt(document.getElementById('manualWk').value);
+  if(!wk||wk<1||wk>52){alert('Ingresa un número de semana válido (1-52)');return;}
+  if(!PLANS[wk]){alert('Los datos de la Semana '+wk+' no están cargados aún.\nSemanas disponibles: '+Object.keys(PLANS).join(', '));return;}
+  db.plans[wk]=JSON.parse(JSON.stringify(PLANS[wk]));
+  db.plans[wk].loaded=true;
+  lsave();renderAll();
+  document.getElementById('uploadMsg').style.display='none';
+  notif('✓ Semana '+wk+' cargada — '+countEx(wk)+' ejercicios');
+}
+function cancelUpload(){document.getElementById('uploadMsg').style.display='none';}
+function toggleC(id){const e=document.getElementById(id);e.style.display=e.style.display==='none'?'block':'none';}
+
+function renderLoaded(){
+  const weeks=Object.values(db.plans).filter(p=>p&&p.loaded).sort((a,b)=>a.week-b.week);
+  document.getElementById('cLoaded').style.display=weeks.length?'block':'none';
+  document.getElementById('cStats').style.display=weeks.length?'block':'none';
+  document.getElementById('loadedList').innerHTML=weeks.map(p=>`
+    <div class="wrow">
+      <div style="flex:1"><div class="exn">Semana ${p.week}</div><div class="exs">${p.days.length} días · ${countEx(p.week)} ejercicios</div></div>
+      <span class="bdg bok" style="margin-right:10px">✓</span>
+      <button class="btn btnsm btnd" onclick="toggleC('dw${p.week}')"><i class="ti ti-trash"></i></button>
+    </div>
+    <div id="dw${p.week}" style="display:none" class="cbox">
+      <div style="font-size:14px;font-weight:600;margin-bottom:6px">¿Borrar Semana ${p.week}?</div>
+      <div class="mu" style="margin-bottom:10px;font-size:13px">El plan se elimina. Los registros se conservan.</div>
+      <div class="flex-row"><button class="btn btnsm btnd" onclick="deleteWeek(${p.week})">Sí, borrar</button><button class="btn btnsm" onclick="toggleC('dw${p.week}')">Cancelar</button></div>
+    </div>`).join('');
+}
+function deleteWeek(wk){delete db.plans[wk];lsave();renderAll();fillSel();document.getElementById('wkEx').innerHTML='';document.getElementById('dayTabs').innerHTML='';notif('Semana '+wk+' eliminada');}
+function deleteAllWeeks(){db.plans={};lsave();renderAll();fillSel();document.getElementById('wkEx').innerHTML='';document.getElementById('dayTabs').innerHTML='';document.getElementById('delAll').style.display='none';notif('Todas las semanas eliminadas');}
+function doReset(){db={plans:{},logs:{},weights:[]};lsave();renderAll();fillSel();document.getElementById('wkEx').innerHTML='';document.getElementById('dayTabs').innerHTML='';document.getElementById('resetAll').style.display='none';notif('App reseteada completamente');}
+
+function refreshStats(){
+  const weeks=Object.values(db.plans).filter(p=>p&&p.loaded).length;
+  const names=new Set();
+  Object.values(db.plans).filter(p=>p&&p.loaded).forEach(p=>p.days.forEach(d=>d.sections.forEach(s=>s.exercises.forEach(e=>names.add(e.name)))));
+  const logs=Object.keys(db.logs).length;
+  let prs=0;
+  names.forEach(n=>{const ls=getLogs(n);if(ls.length>1){const mx=ls.map(l=>Math.max(0,...(l.sets||[]).map(s=>parseFloat(s.val)||0)));if(mx[mx.length-1]>=Math.max(...mx.slice(0,-1)))prs++;}});
+  document.getElementById('stW').textContent=weeks;
+  document.getElementById('stE').textContent=names.size;
+  document.getElementById('stL').textContent=logs;
+  document.getElementById('stP').textContent=prs;
+}
+function fillSel(){
+  const sel=document.getElementById('wkSel'),cur=sel.value;
+  sel.innerHTML='<option value="">— Semana —</option>';
+  Object.values(db.plans).filter(p=>p&&p.loaded).sort((a,b)=>a.week-b.week).forEach(p=>sel.innerHTML+=`<option value="${p.week}">Semana ${p.week}</option>`);
+  if(cur)sel.value=cur;
+}
+function loadDays(){
+  const wk=parseInt(document.getElementById('wkSel').value);
+  if(!wk||!db.plans[wk]){document.getElementById('dayTabs').innerHTML='';document.getElementById('wkEx').innerHTML='';return;}
+  aplan=db.plans[wk];aday=0;renderTabs();renderDay(0);
+}
+function renderTabs(){document.getElementById('dayTabs').innerHTML=aplan.days.map((d,i)=>`<button class="dtab ${i===aday?'active':''}" onclick="selDay(${i})">${d.label}</button>`).join('');}
+function selDay(i){aday=i;renderTabs();renderDay(i);}
+
+function renderDay(i){
+  const day=aplan.days[i];
+  let h=`<div class="card"><div class="mu" style="margin-bottom:12px;font-weight:600;font-size:15px">${day.name}</div>`;
+  day.sections.forEach(sec=>{
+    h+=`<div class="ssep">${sec.title}</div>`;
+    sec.exercises.forEach(ex=>{
+      const logs=getLogs(ex.name),last=logs.length?logs[logs.length-1]:null;
+      const bc=BM[ex.muscle]||'bca';
+      let hist='';
+      if(last&&last.sets&&last.sets.length){
+        const disp=ex.isCardio?last.sets[0].val+' min':last.sets.map(s=>`${s.val}kg×${s.reps}`).join(' | ');
+        const allMx=logs.map(l=>Math.max(0,...(l.sets||[]).map(s=>parseFloat(s.val)||0)));
+        const isPR=allMx.length>1&&allMx[allMx.length-1]>=Math.max(...allMx.slice(0,-1));
+        hist=`<div style="margin-top:5px;display:flex;align-items:center;flex-wrap:wrap;gap:5px"><span style="font-size:12px;color:var(--text2)">Última S${last.week}: ${disp}</span>${isPR?'<span class="pr">🏆 PR</span>':''}${logs.length>1?`<span style="font-size:11px;color:var(--text2)">${logs.length} reg.</span>`:''}</div>`;
+      }
+      const regBtn=sec.type!=='warmup'?`<button class="btn btnsm btnp" style="white-space:nowrap;flex-shrink:0" onclick='openLogM(${JSON.stringify(ex)},${aplan.week})'>+ Log</button>`:'';
+      h+=`<div class="exrow"><div style="flex:1"><div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap"><span class="exn">${ex.name}</span><span class="bdg ${bc}">${ex.muscle}</span></div><div class="exs">${ex.sets} serie(s) · ${ex.reps}</div>${hist}</div>${regBtn}</div>`;
+    });
+  });
+  h+='</div>';
+  document.getElementById('wkEx').innerHTML=h;
+}
+
+function getLogs(name){return Object.values(db.logs).filter(l=>l.exercise===name).sort((a,b)=>a.week-b.week||(a.date||'').localeCompare(b.date||''));}
+
+function openLogM(ex,wk){
+  mEx=ex;mWk=wk;
+  document.getElementById('mlName').textContent=ex.name;
+  document.getElementById('mlBadge').innerHTML=`<span class="bdg ${BM[ex.muscle]||'bca'}">${ex.muscle}</span>`;
+  const logs=getLogs(ex.name);
+  let h=logs.length
+    ?'<div style="font-size:14px;font-weight:600;margin-bottom:6px">Historial previo</div>'+logs.slice(-4).map(l=>{const d=ex.isCardio?(l.sets||[]).map(s=>s.val+' min').join(', '):(l.sets||[]).map(s=>`${s.val}kg×${s.reps}`).join(' | ');return `<div class="hrow"><span class="wchip">S${l.week}</span><span style="flex:1">${d}</span><span class="mu" style="font-size:12px">${l.date||''}</span></div>`;}).join('')+'<div style="height:10px"></div>'
+    :'<div class="mu" style="margin-bottom:12px">Primera vez que realizas este ejercicio 💪</div>';
+  document.getElementById('mlHist').innerHTML=h;
+  document.getElementById('mlHint').innerHTML=`<span class="mu" style="font-size:13px">${ex.isCardio?'⏱ Tiempo en minutos':'Peso (kg) · Repeticiones'}</span>`;
+  if(ex.isCardio){mSets=[{val:'',reps:''}];document.getElementById('mlAdd').style.display='none';}
+  else{mSets=Array.from({length:ex.sets||3},()=>({val:'',reps:''}));document.getElementById('mlAdd').style.display='';}
+  renderLogSets();
+  document.getElementById('mdLog').style.display='flex';
+}
+function renderLogSets(){
+  document.getElementById('mlSets').innerHTML=mEx.isCardio
+    ?`<div class="srow"><span class="slbl">Tiempo</span><input type="number" inputmode="decimal" placeholder="minutos" value="${mSets[0].val}" min="1" step="1" oninput="mSets[0].val=this.value"><span class="mu">min</span></div>`
+    :mSets.map((s,i)=>`<div class="srow"><span class="slbl">Set ${i+1}</span><input type="number" inputmode="decimal" placeholder="kg" value="${s.val}" min="0" step="0.5" oninput="mSets[${i}].val=this.value" style="max-width:90px"><input type="number" inputmode="decimal" placeholder="reps" value="${s.reps}" min="1" step="1" oninput="mSets[${i}].reps=this.value" style="max-width:80px">${mSets.length>1?`<button class="btn btnsm" onclick="rmLS(${i})"><i class="ti ti-x"></i></button>`:''}</div>`).join('');
+}
+function addSet(){mSets.push({val:'',reps:''});renderLogSets();}
+function rmLS(i){if(mSets.length>1){mSets.splice(i,1);renderLogSets();}}
+function saveLog(){
+  let filled=mEx.isCardio?[{val:mSets[0].val,reps:''}]:mSets.filter(s=>s.val&&s.reps);
+  if(!filled[0]||!filled[0].val){alert(mEx.isCardio?'Ingresa los minutos':'Ingresa kg y repeticiones');return;}
+  const key=mEx.name+'_w'+mWk+'_'+Date.now();
+  db.logs[key]={exercise:mEx.name,muscle:mEx.muscle,week:mWk,isCardio:mEx.isCardio,date:new Date().toISOString().split('T')[0],sets:filled};
+  lsave();refreshStats();renderDay(aday);closeM('mdLog');
+  notif('✓ '+(mEx.isCardio?filled[0].val+' min':filled.map(s=>`${s.val}kg×${s.reps}`).join(', ')));
+}
+
+function openEditM(key){
+  eKey=key;eEx=db.logs[key];if(!eEx)return;
+  eSets=JSON.parse(JSON.stringify(eEx.sets||[]));
+  document.getElementById('meName').textContent=eEx.exercise+' — S'+eEx.week+' '+(eEx.date||'');
+  document.getElementById('meBadge').innerHTML=`<span class="bdg ${BM[eEx.muscle]||'bca'}">${eEx.muscle}</span>`;
+  renderEditSets();
+  document.getElementById('mdEdit').style.display='flex';
+}
+function renderEditSets(){
+  document.getElementById('meSets').innerHTML=eEx.isCardio
+    ?`<div class="srow"><span class="slbl">Tiempo</span><input type="number" inputmode="decimal" value="${eSets[0]?.val||''}" min="1" step="1" oninput="eSets[0].val=this.value"><span class="mu">min</span></div>`
+    :eSets.map((s,i)=>`<div class="srow"><span class="slbl">Set ${i+1}</span><input type="number" inputmode="decimal" placeholder="kg" value="${s.val}" min="0" step="0.5" oninput="eSets[${i}].val=this.value" style="max-width:90px"><input type="number" inputmode="decimal" placeholder="reps" value="${s.reps}" min="1" step="1" oninput="eSets[${i}].reps=this.value" style="max-width:80px">${eSets.length>1?`<button class="btn btnsm" onclick="rmES(${i})"><i class="ti ti-x"></i></button>`:''}</div>`).join('');
+}
+function rmES(i){if(eSets.length>1){eSets.splice(i,1);renderEditSets();}}
+function updateLog(){
+  if(!eKey)return;
+  const filled=eEx.isCardio?eSets.filter(s=>s.val):eSets.filter(s=>s.val&&s.reps);
+  if(!filled.length){alert('Ingresa valores válidos');return;}
+  db.logs[eKey].sets=filled;lsave();refreshStats();renderHistory();renderDay(aday);closeM('mdEdit');notif('Registro actualizado ✓');
+}
+function deleteLog(){if(!eKey)return;delete db.logs[eKey];lsave();refreshStats();renderHistory();renderDay(aday);closeM('mdEdit');notif('Registro eliminado');}
+
+function openDetailM(name,muscle,isCardio){
+  const logs=getLogs(name);
+  document.getElementById('mdName').textContent=name;
+  document.getElementById('mdBadge').innerHTML=`<span class="bdg ${BM[muscle]||'bca'}">${muscle}</span>`;
+  if(dChart){dChart.destroy();dChart=null;}
+  const wrap=document.getElementById('mdChartWrap');
+  const isDark=window.matchMedia('(prefers-color-scheme:dark)').matches;
+  const gridColor=isDark?'rgba(255,255,255,.08)':'rgba(0,0,0,.08)';
+  if(logs.length>=2&&!isCardio){
+    wrap.style.display='block';
+    dChart=new Chart(document.getElementById('mdCanvas'),{
+      type:'line',
+      data:{labels:logs.map(l=>'S'+l.week),datasets:[{label:'Máx kg',data:logs.map(l=>Math.max(0,...(l.sets||[]).map(s=>parseFloat(s.val)||0))),borderColor:'#1D9E75',backgroundColor:'rgba(29,158,117,.12)',tension:.35,pointRadius:5,pointBackgroundColor:'#1D9E75',fill:true,borderWidth:2}]},
+      options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{ticks:{font:{size:11}},grid:{color:gridColor}},x:{ticks:{font:{size:11}},grid:{display:false}}}}
+    });
+    document.getElementById('mdLogs').innerHTML='<div style="font-size:12px;color:var(--text2);margin-bottom:10px;display:flex;align-items:center;gap:6px"><span style="width:12px;height:3px;background:#1D9E75;display:inline-block;border-radius:2px"></span>Máx kg por sesión</div>'+buildLogList(logs,isCardio);
+  } else if(logs.length>=2&&isCardio){
+    wrap.style.display='block';
+    dChart=new Chart(document.getElementById('mdCanvas'),{
+      type:'bar',
+      data:{labels:logs.map(l=>'S'+l.week),datasets:[{data:logs.map(l=>parseFloat((l.sets||[{val:0}])[0].val)||0),backgroundColor:'rgba(29,158,117,.7)',borderRadius:6}]},
+      options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{ticks:{font:{size:11}},grid:{color:gridColor}},x:{ticks:{font:{size:11}},grid:{display:false}}}}
+    });
+    document.getElementById('mdLogs').innerHTML=buildLogList(logs,isCardio);
+  } else {
+    wrap.style.display='none';
+    document.getElementById('mdLogs').innerHTML=logs.length?buildLogList(logs,isCardio):'<div class="mu" style="text-align:center;padding:24px">Sin registros aún.<br>Usa "+ Log" en la pestaña Rutina.</div>';
+  }
+  document.getElementById('mdDetail').style.display='flex';
+}
+function buildLogList(logs,isCardio){
+  const allKeys=Object.keys(db.logs);
+  return '<div style="font-size:14px;font-weight:600;margin-bottom:8px">Todos los registros</div>'+
+    logs.slice().reverse().map(l=>{
+      const key=allKeys.find(k=>db.logs[k]===l)||'';
+      const disp=isCardio?(l.sets||[]).map(s=>s.val+' min').join(', '):(l.sets||[]).map(s=>`${s.val}kg×${s.reps}`).join(' | ');
+      return `<div class="hrow"><span class="wchip">S${l.week}</span><span style="flex:1;font-size:13px">${disp}</span><span class="mu" style="font-size:12px">${l.date||''}</span><button class="btn btnsm" onclick="openEditM('${key}')" style="margin-left:4px"><i class="ti ti-edit"></i></button></div>`;
+    }).join('');
+}
+
+function renderHistory(){
+  const q=(document.getElementById('srch')||{value:''}).value.toLowerCase().trim();
+  const muscles=new Set();
+  Object.values(db.plans).filter(p=>p&&p.loaded).forEach(p=>p.days.forEach(d=>d.sections.forEach(s=>s.exercises.forEach(e=>{if(e.muscle!=='Calentamiento')muscles.add(e.muscle)}))));
+  const fEl=document.getElementById('mfBtns');
+  if(fEl)fEl.innerHTML=`<button class="dtab ${mFilter===''?'active':''}" onclick="setMF('')">Todos</button>`+[...muscles].map(m=>`<button class="dtab ${mFilter===m?'active':''}" onclick="setMF('${m}')">${m}</button>`).join('');
+  const exMap={};
+  Object.values(db.plans).filter(p=>p&&p.loaded).forEach(p=>p.days.forEach(d=>d.sections.forEach(s=>s.exercises.forEach(e=>{
+    if(e.muscle==='Calentamiento')return;
+    if(!exMap[e.name])exMap[e.name]={name:e.name,muscle:e.muscle,isCardio:e.isCardio,weeks:[]};
+    if(!exMap[e.name].weeks.includes(p.week))exMap[e.name].weeks.push(p.week);
+  }))));
+  const filtered=Object.values(exMap).filter(e=>(!q||e.name.toLowerCase().includes(q))&&(!mFilter||e.muscle===mFilter)).sort((a,b)=>a.name.localeCompare(b.name));
+  const el=document.getElementById('histList');
+  if(!filtered.length){el.innerHTML='<div style="text-align:center;padding:32px;color:var(--text2);font-size:14px">Sin ejercicios aún.<br>Sube un PDF primero.</div>';return;}
+  el.innerHTML=filtered.map(e=>{
+    const logs=getLogs(e.name);const bc=BM[e.muscle]||'bca';
+    const last=logs.length?logs[logs.length-1]:null;
+    let lastDisp='',progBadge='';
+    if(last&&last.sets&&last.sets.length){
+      if(e.isCardio){lastDisp=last.sets[0].val+' min';}
+      else{
+        const maxes=logs.map(l=>Math.max(0,...(l.sets||[]).map(s=>parseFloat(s.val)||0)));
+        lastDisp=Math.max(...maxes)+'kg';
+        if(maxes.length>1&&maxes[0]>0){
+          const prog=Math.round((maxes[maxes.length-1]-maxes[0])/maxes[0]*100);
+          progBadge=`<span style="font-size:12px;color:${prog>=0?'#0F6E56':'#993C1D'};font-weight:600">${prog>=0?'▲':'▼'}${Math.abs(prog)}%</span>`;
+        }
+      }
+    }
+    return `<div class="hlist-row" onclick="openDetailM('${e.name.replace(/'/g,"\\'")}','${e.muscle}',${e.isCardio})">
+      <div style="flex:1;min-width:0">
+        <div class="hlist-name">${e.name}</div>
+        <div class="hlist-meta">
+          <span class="bdg ${bc}">${e.muscle}</span>
+          ${e.weeks.map(w=>`<span class="wchip">S${w}</span>`).join('')}
+          ${logs.length?`<span style="font-size:11px;color:var(--text2)">${logs.length} reg.</span>`:''}
+        </div>
+      </div>
+      <div class="hlist-right">
+        ${lastDisp?`<span style="font-size:14px;font-weight:700">${lastDisp}</span>`:`<span style="font-size:12px;color:var(--text2)">Sin datos</span>`}
+        ${progBadge}
+        <span style="font-size:11px;color:var(--text2)">Ver →</span>
+      </div>
+    </div>`;
+  }).join('');
+}
+function setMF(m){mFilter=m;renderHistory();}
+
+function saveWeight(){
+  const val=parseFloat(document.getElementById('wKg').value);
+  const date=document.getElementById('wDate').value;
+  const notes=document.getElementById('wNotes').value;
+  if(!val||!date){alert('Ingresa fecha y peso');return;}
+  db.weights.push({val,date,notes});
+  db.weights.sort((a,b)=>a.date.localeCompare(b.date));
+  lsave();renderWChart();
+  document.getElementById('wKg').value='';document.getElementById('wNotes').value='';
+  notif('✓ Peso guardado: '+val+' kg');
+}
+function renderWChart(){
+  if(!db.weights||!db.weights.length){document.getElementById('wChart').innerHTML='<div style="text-align:center;padding:24px;color:var(--text2);font-size:14px">Sin registros aún</div>';document.getElementById('wLog').innerHTML='';return;}
+  const ws=db.weights.slice(-8);
+  const mn=Math.min(...ws.map(w=>w.val)),mx=Math.max(...ws.map(w=>w.val)),rng=mx-mn||1;
+  const bars=ws.map(w=>{const h=Math.max(8,Math.round(((w.val-mn)/rng)*60+8));return `<div style="display:flex;flex-direction:column;align-items:center;flex:1;gap:3px"><div style="font-size:10px;color:var(--text2)">${w.val}</div><div style="width:100%;background:#9FE1CB;border-radius:4px 4px 0 0;height:${h}px"></div><div style="font-size:10px;color:var(--text2)">${w.date.slice(5)}</div></div>`;}).join('');
+  const f=db.weights[0].val,l=db.weights[db.weights.length-1].val,d=Math.round((l-f)*10)/10;
+  document.getElementById('wChart').innerHTML=`<div class="g3" style="margin-bottom:12px"><div class="met"><div class="mv">${l}kg</div><div class="mlb">Actual</div></div><div class="met"><div class="mv">${Math.min(...db.weights.map(w=>w.val))}kg</div><div class="mlb">Mínimo</div></div><div class="met"><div class="mv" style="color:${d>0?'#0F6E56':d<0?'#993C1D':'var(--text)'}">${d>0?'+':''}${d}kg</div><div class="mlb">Cambio</div></div></div><div style="display:flex;align-items:flex-end;gap:4px;height:72px">${bars}</div>`;
+  document.getElementById('wLog').innerHTML=db.weights.slice().reverse().map(w=>`<div class="hrow"><span style="width:8px;height:8px;border-radius:50%;background:#1D9E75;display:inline-block;flex-shrink:0"></span><span style="flex:1;font-weight:600;font-size:14px">${w.val} kg</span><span class="mu" style="font-size:13px">${w.date}</span>${w.notes?`<span class="mu" style="font-size:12px;font-style:italic">${w.notes}</span>`:''}</div>`).join('');
+}
+
+function closeM(id){document.getElementById(id).style.display='none';if(id==='mdDetail'&&dChart){dChart.destroy();dChart=null;}}
+let _nt;
+function notif(msg){const n=document.getElementById('ntf');n.textContent=msg;n.style.opacity='1';clearTimeout(_nt);_nt=setTimeout(()=>n.style.opacity='0',2800);}
+
+init();
+</script>
+</body>
+</html>
