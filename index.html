@@ -2,13 +2,52 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="theme-color" content="#ffffff">
-<title>Gym Tracker — Juan Carlos</title>
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="PULSE">
+<meta name="theme-color" content="#0a0a0a">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png">
+<title>PULSE — Gym Tracker</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@2.44.0/tabler-icons.min.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+  import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged, sendPasswordResetEmail } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+  import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyAG7PTKRK0rsJR8x7vUqpIVIUdqt1q1rVQ",
+    authDomain: "gym-tracker-series.firebaseapp.com",
+    projectId: "gym-tracker-series",
+    storageBucket: "gym-tracker-series.firebasestorage.app",
+    messagingSenderId: "14520027667",
+    appId: "1:14520027667:web:bbd3c771a4c3d3767ccde6"
+  };
+
+  const fbApp = initializeApp(firebaseConfig);
+  const auth = getAuth(fbApp);
+  const dbFs = getFirestore(fbApp);
+
+  // Expose to global scope so the non-module script below can use them
+  window.fbAuth = auth;
+  window.fbDb = dbFs;
+  window.fbCreateUser = createUserWithEmailAndPassword;
+  window.fbSignIn = signInWithEmailAndPassword;
+  window.fbSignOut = signOut;
+  window.fbOnAuthStateChanged = onAuthStateChanged;
+  window.fbSendPasswordReset = sendPasswordResetEmail;
+  window.fbDoc = doc;
+  window.fbGetDoc = getDoc;
+  window.fbSetDoc = setDoc;
+
+  // Signal that Firebase is ready
+  window.dispatchEvent(new Event('firebase-ready'));
+</script>
 <style>
 :root{--bg:#fff;--bg2:#f5f5f4;--bg3:#e8e6e1;--text:#1a1a18;--text2:#6b6b67;--border:#e0ddd7;--green:#1D9E75;--green-light:rgba(29,158,117,.12);--red-bg:#FCEBEB;--red:#791F1F;--red-border:#F7C1C1;--radius:12px;--radius-sm:8px;--shadow:0 1px 3px rgba(0,0,0,.08)}
 @media(prefers-color-scheme:dark){:root{--bg:#1c1c1e;--bg2:#2c2c2e;--bg3:#3a3a3c;--text:#f5f5f0;--text2:#aeaead;--border:#3a3a3c}}
@@ -80,9 +119,122 @@ button{cursor:pointer;font-family:inherit}
 .inline-edit input{margin-bottom:6px;font-size:14px}
 .inline-edit-btns{display:flex;gap:6px}
 .add-ex-row{padding:8px 0;display:flex;gap:8px;align-items:center}
+/* Replace exercise box */
+.replace-box{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:12px;margin-bottom:14px}
+.replace-label{display:flex;align-items:center;gap:8px;cursor:pointer;font-size:14px;font-weight:500}
+.replace-label input[type="checkbox"]{width:20px;height:20px;accent-color:var(--green);flex-shrink:0;cursor:pointer}
+/* Set count selector */
+.set-count-row{display:flex;gap:6px;flex-wrap:wrap}
+.set-count-btn{width:40px;height:40px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--bg2);color:var(--text);font-size:15px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center}
+.set-count-btn.active{background:var(--green);color:#fff;border-color:transparent}
+.replaced-tag{background:#FAEEDA;color:#633806;font-size:11px;padding:2px 7px;border-radius:6px;font-weight:600;display:inline-flex;align-items:center;gap:3px}
+/* LOGIN SCREEN */
+#loginScreen{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;padding:20px;background:var(--bg2);gap:20px}
+.login-box{width:100%;max-width:380px;background:var(--bg);border-radius:var(--radius);padding:32px 24px;box-shadow:var(--shadow)}
+.login-logo-img{display:block;width:84px;height:84px;border-radius:20px;margin:0 auto 14px;box-shadow:0 4px 16px rgba(0,0,0,.15)}
+.login-title{text-align:center;font-size:20px;font-weight:700;margin-bottom:4px}
+.login-sub{text-align:center;color:var(--text2);font-size:13px;margin-bottom:24px}
+.login-field{margin-bottom:14px}
+.login-field label{display:block;font-size:13px;color:var(--text2);margin-bottom:5px;font-weight:500}
+.login-error{background:var(--red-bg);color:var(--red);border-radius:var(--radius-sm);padding:10px 12px;font-size:13px;margin-bottom:14px;display:none}
+.login-toggle{text-align:center;margin-top:18px;font-size:13px;color:var(--text2)}
+.login-toggle a{color:var(--green);font-weight:600;cursor:pointer;text-decoration:none}
+.login-forgot{text-align:center;margin-top:10px;font-size:12px}
+.login-forgot a{color:var(--text2);cursor:pointer;text-decoration:underline}
+.login-loading{display:flex;align-items:center;justify-content:center;min-height:100vh;background:var(--bg2)}
+#appWrap{display:none}
+.user-bar{display:flex;align-items:center;justify-content:space-between;padding:10px 16px;background:var(--bg);border-bottom:1px solid var(--border);font-size:13px}
+.user-bar-brand{display:flex;align-items:center;gap:10px;min-width:0}
+.header-icon{width:30px;height:30px;border-radius:8px;flex-shrink:0}
+.header-text{display:flex;flex-direction:column;line-height:1.2;min-width:0}
+.header-app-name{font-size:13px;font-weight:700;color:var(--text)}
+.user-bar-email{color:var(--text2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:200px;font-size:11px}
+.sync-indicator{font-size:11px;color:var(--text2);display:flex;align-items:center;gap:4px}
+.sync-indicator.syncing{color:var(--green)}
+/* Download bar — subtle, below login box */
+.download-bar{display:flex;align-items:center;gap:10px;opacity:.55;transition:opacity .2s}
+.download-bar:hover{opacity:.85}
+.download-label{font-size:11px;color:var(--text2);letter-spacing:.02em}
+.download-icon-btn{background:none;border:none;color:var(--text2);font-size:18px;padding:4px;display:flex;align-items:center;justify-content:center;cursor:pointer;border-radius:6px;transition:.15s}
+.download-icon-btn:hover{color:var(--text);background:var(--bg3)}
+/* Install instructions modal */
+.install-step{display:flex;align-items:flex-start;gap:12px;padding:10px 0;border-bottom:1px solid var(--border);font-size:14px;line-height:1.4}
+.install-step:last-child{border-bottom:none}
+.install-step-num{flex-shrink:0;width:24px;height:24px;border-radius:50%;background:var(--green);color:#fff;font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:center}
 </style>
 </head>
 <body>
+
+<!-- LOADING SCREEN -->
+<div id="loadingScreen" class="login-loading">
+  <span class="spinner" style="width:28px;height:28px;border-width:3px"></span>
+</div>
+
+<!-- LOGIN SCREEN -->
+<div id="loginScreen" style="display:none">
+  <div class="login-box">
+    <img src="icon-512.png" alt="PULSE" class="login-logo-img">
+    <div class="login-title" id="loginTitle">Iniciar sesión</div>
+    <div class="login-sub" id="loginSub">PULSE — tus rutinas, donde sea</div>
+
+    <div class="login-error" id="loginError"></div>
+
+    <div class="login-field">
+      <label>Correo electrónico</label>
+      <input type="email" id="loginEmail" placeholder="tu@correo.com" autocomplete="email">
+    </div>
+    <div class="login-field">
+      <label>Contraseña</label>
+      <input type="password" id="loginPassword" placeholder="••••••••" autocomplete="current-password" onkeydown="if(event.key==='Enter')handleAuthSubmit()">
+    </div>
+
+    <button class="btn btnp btn-block" id="loginSubmitBtn" onclick="handleAuthSubmit()">Iniciar sesión</button>
+
+    <div class="login-forgot" id="forgotWrap">
+      <a onclick="handleForgotPassword()">¿Olvidaste tu contraseña?</a>
+    </div>
+
+    <div class="login-toggle">
+      <span id="toggleText">¿No tienes cuenta?</span> <a onclick="toggleAuthMode()" id="toggleLink">Regístrate</a>
+    </div>
+  </div>
+
+  <div class="download-bar">
+    <span class="download-label">Descargar para</span>
+    <button class="download-icon-btn" onclick="handleDownloadClick('ios')" aria-label="Descargar para iPhone">
+      <i class="ti ti-brand-apple"></i>
+    </button>
+    <button class="download-icon-btn" onclick="handleDownloadClick('android')" aria-label="Descargar para Android">
+      <i class="ti ti-brand-android"></i>
+    </button>
+  </div>
+</div>
+
+<!-- MODAL: install instructions (iOS / Android fallback) -->
+<div id="installModal" style="display:none" class="mdbg" onclick="if(event.target===this)closeM('installModal')">
+<div class="mdl">
+  <div class="mhdr"><span id="installModalTitle" style="font-size:16px;font-weight:700"></span><button class="xbtn" onclick="closeM('installModal')">×</button></div>
+  <img src="icon-192.png" alt="" style="width:56px;height:56px;border-radius:14px;margin:4px 0 16px">
+  <div id="installModalSteps"></div>
+  <button class="btn btnp btn-block" onclick="closeM('installModal')" style="margin-top:8px">Entendido</button>
+</div>
+</div>
+
+<!-- MAIN APP -->
+<div id="appWrap">
+<div class="user-bar">
+  <div class="user-bar-brand">
+    <img src="icon-192.png" alt="" class="header-icon">
+    <div class="header-text">
+      <span class="header-app-name">PULSE</span>
+      <span class="user-bar-email" id="userEmailDisplay"></span>
+    </div>
+  </div>
+  <div class="flex-row" style="gap:10px">
+    <span class="sync-indicator" id="syncIndicator"><i class="ti ti-cloud-check"></i> Sincronizado</span>
+    <button class="btn btnsm" onclick="handleLogout()"><i class="ti ti-logout"></i> Salir</button>
+  </div>
+</div>
 
 <nav class="nav">
   <button class="nb active" onclick="showPage('upload',this)"><i class="ti ti-upload"></i>PDFs</button>
@@ -197,13 +349,33 @@ button{cursor:pointer;font-family:inherit}
 <div class="mdl">
   <div class="mhdr"><span id="mlName"></span><button class="xbtn" onclick="closeM('mdLog')">×</button></div>
   <div id="mlBadge" style="margin-bottom:12px"></div>
+
+  <!-- Replace exercise checkbox -->
+  <div class="replace-box">
+    <label class="replace-label">
+      <input type="checkbox" id="mlReplaceCheck" onchange="toggleReplaceInput()">
+      <span>Reemplazar ejercicio</span>
+    </label>
+    <div id="mlReplaceInputWrap" style="display:none;margin-top:8px">
+      <div class="mu" style="font-size:12px;margin-bottom:4px">¿Qué ejercicio hiciste en su lugar?</div>
+      <input type="text" id="mlReplaceName" placeholder="Nombre del ejercicio reemplazo">
+    </div>
+  </div>
+
   <div id="mlHist"></div>
-  <div style="font-size:14px;font-weight:600;margin-bottom:6px">Registrar hoy</div>
+
+  <div style="font-size:14px;font-weight:600;margin-bottom:8px">Registrar hoy</div>
   <div id="mlHint" style="margin-bottom:10px"></div>
+
+  <!-- Set count selector -->
+  <div id="mlSetCountWrap" style="margin-bottom:12px">
+    <div class="mu" style="font-size:13px;margin-bottom:6px">Número de sets</div>
+    <div class="set-count-row" id="mlSetCountBtns"></div>
+  </div>
+
   <div id="mlSets"></div>
   <div class="flex-row" style="margin-top:16px">
-    <button class="btn" id="mlAdd" onclick="addSet()" style="flex:1"><i class="ti ti-plus"></i> Set</button>
-    <button class="btn btnp" onclick="saveLog()" style="flex:2">Guardar <i class="ti ti-check"></i></button>
+    <button class="btn btnp" onclick="saveLog()" style="flex:1">Guardar <i class="ti ti-check"></i></button>
   </div>
 </div>
 </div>
@@ -233,6 +405,7 @@ button{cursor:pointer;font-family:inherit}
 </div>
 
 <div class="ntf" id="ntf"></div>
+</div><!-- /#appWrap -->
 
 <script>
 pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
@@ -243,12 +416,46 @@ let db={plans:{},logs:{},weights:[]};
 let aplan=null,aday=0,mEx=null,mWk=0,mSets=[],eKey=null,eEx=null,eSets=[],mFilter='',dChart=null;
 let pendingPlan=null;
 
-function lsave(){try{localStorage.setItem(KEY,JSON.stringify(db));}catch(e){}}
-function lload(){
-  try{const s=localStorage.getItem(KEY);if(s){db=JSON.parse(s);return;}
-  for(const k of ['gymdb_v8','gymdb_v7','gymdb_v6']){const o=localStorage.getItem(k);if(o){db=JSON.parse(o);lsave();return;}}}catch(e){}
+// ─── STORAGE: Firestore (replaces localStorage) ────────────────────────────────
+let currentUser=null;
+let saveDebounceTimer=null;
+
+function lsave(){
+  if(!currentUser)return;
+  const indicator=document.getElementById('syncIndicator');
+  if(indicator){indicator.innerHTML='<i class="ti ti-cloud-upload"></i> Guardando...';indicator.classList.add('syncing');}
+  clearTimeout(saveDebounceTimer);
+  saveDebounceTimer=setTimeout(async()=>{
+    try{
+      const ref=window.fbDoc(window.fbDb,'users',currentUser.uid);
+      await window.fbSetDoc(ref,{data:JSON.stringify(db),updatedAt:Date.now()});
+      if(indicator){indicator.innerHTML='<i class="ti ti-cloud-check"></i> Sincronizado';indicator.classList.remove('syncing');}
+    }catch(e){
+      console.error('Error guardando en Firestore:',e);
+      if(indicator){indicator.innerHTML='<i class="ti ti-cloud-x"></i> Error al guardar';indicator.classList.remove('syncing');}
+    }
+  },500);
 }
-function init(){lload();if(!db.plans)db.plans={};if(!db.logs)db.logs={};if(!db.weights)db.weights=[];document.getElementById('wDate').value=new Date().toISOString().split('T')[0];renderAll();}
+
+async function lload(){
+  if(!currentUser)return;
+  try{
+    const ref=window.fbDoc(window.fbDb,'users',currentUser.uid);
+    const snap=await window.fbGetDoc(ref);
+    if(snap.exists()&&snap.data().data){db=JSON.parse(snap.data().data);}
+    else{db={plans:{},logs:{},weights:[]};}
+  }catch(e){
+    console.error('Error cargando de Firestore:',e);
+    db={plans:{},logs:{},weights:[]};
+  }
+}
+
+async function init(){
+  await lload();
+  if(!db.plans)db.plans={};if(!db.logs)db.logs={};if(!db.weights)db.weights=[];
+  document.getElementById('wDate').value=new Date().toISOString().split('T')[0];
+  renderAll();
+}
 function renderAll(){renderLoaded();refreshStats();fillSel();renderHistory();renderWChart();}
 function showPage(id,btn){document.querySelectorAll('.pg').forEach(p=>p.classList.remove('active'));document.querySelectorAll('.nb').forEach(b=>b.classList.remove('active'));document.getElementById('pg-'+id).classList.add('active');btn.classList.add('active');if(id==='history')renderHistory();if(id==='weight')renderWChart();if(id==='upload'){renderLoaded();refreshStats();}}
 
@@ -646,8 +853,9 @@ function renderDay(i){
       let hist='';
       if(last&&last.sets&&last.sets.length){const disp=ex.isCardio?last.sets[0].val+' min':last.sets.map(s=>`${s.val}kg×${s.reps}`).join(' | ');const allMx=logs.map(l=>Math.max(0,...(l.sets||[]).map(s=>parseFloat(s.val)||0)));const isPR=allMx.length>1&&allMx[allMx.length-1]>=Math.max(...allMx.slice(0,-1));
         hist=`<div style="margin-top:5px;display:flex;align-items:center;flex-wrap:wrap;gap:5px"><span style="font-size:12px;color:var(--text2)">Última S${last.week}: ${disp}</span>${isPR?'<span class="pr">🏆 PR</span>':''}${logs.length>1?`<span style="font-size:11px;color:var(--text2)">${logs.length} reg.</span>`:''}</div>`;}
+      const replaceTag=ex.replacedWith?`<span class="replaced-tag">↔ Reemplazado: ${ex.replacedWith}</span>`:'';
       const regBtn=sec.type!=='warmup'?`<button class="btn btnsm btnp" style="white-space:nowrap;flex-shrink:0" onclick='openLogM(${JSON.stringify(ex)},${aplan.week})'>+ Log</button>`:'';
-      h+=`<div class="exrow"><div style="flex:1"><div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap"><span class="exn">${ex.name}</span><span class="bdg ${bc}">${ex.muscle}</span></div><div class="exs">${ex.sets} serie(s) · ${ex.reps}</div>${hist}</div>${regBtn}</div>`;
+      h+=`<div class="exrow"><div style="flex:1"><div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap"><span class="exn">${ex.name}</span><span class="bdg ${bc}">${ex.muscle}</span>${replaceTag}</div><div class="exs">${ex.sets} serie(s) · ${ex.reps}</div>${hist}</div>${regBtn}</div>`;
     });
   });
   h+='</div>';document.getElementById('wkEx').innerHTML=h;
@@ -656,24 +864,86 @@ function getLogs(name){return Object.values(db.logs).filter(l=>l.exercise===name
 
 // ─── LOG MODAL ────────────────────────────────────────────────────────────────
 function openLogM(ex,wk){
-  mEx=ex;mWk=wk;document.getElementById('mlName').textContent=ex.name;document.getElementById('mlBadge').innerHTML=`<span class="bdg ${BM[ex.muscle]||'bca'}">${ex.muscle}</span>`;
+  mEx=ex;mWk=wk;
+  document.getElementById('mlName').textContent=ex.name;
+  document.getElementById('mlBadge').innerHTML=`<span class="bdg ${BM[ex.muscle]||'bca'}">${ex.muscle}</span>`;
+  // Reset replace checkbox
+  document.getElementById('mlReplaceCheck').checked=false;
+  document.getElementById('mlReplaceName').value='';
+  document.getElementById('mlReplaceInputWrap').style.display='none';
   const logs=getLogs(ex.name);
-  let h=logs.length?'<div style="font-size:14px;font-weight:600;margin-bottom:6px">Historial previo</div>'+logs.slice(-4).map(l=>{const d=ex.isCardio?(l.sets||[]).map(s=>s.val+' min').join(', '):(l.sets||[]).map(s=>`${s.val}kg×${s.reps}`).join(' | ');return `<div class="hrow"><span class="wchip">S${l.week}</span><span style="flex:1">${d}</span><span class="mu" style="font-size:12px">${l.date||''}</span></div>`;}).join('')+'<div style="height:10px"></div>'
+  let h=logs.length?'<div style="font-size:14px;font-weight:600;margin-bottom:6px">Historial previo</div>'+logs.slice(-4).map(l=>{const d=ex.isCardio?(l.sets||[]).map(s=>s.val+' min').join(', '):(l.sets||[]).map(s=>`${s.val}kg×${s.reps}`).join(' | ');const rep=l.replacedWith?`<span class="replaced-tag">↔ ${l.replacedWith}</span>`:'';return `<div class="hrow"><span class="wchip">S${l.week}</span><span style="flex:1">${d} ${rep}</span><span class="mu" style="font-size:12px">${l.date||''}</span></div>`;}).join('')+'<div style="height:10px"></div>'
     :'<div class="mu" style="margin-bottom:12px">Primera vez que realizas este ejercicio 💪</div>';
-  document.getElementById('mlHist').innerHTML=h;document.getElementById('mlHint').innerHTML=`<span class="mu" style="font-size:13px">${ex.isCardio?'⏱ Tiempo en minutos':'Peso (kg) · Repeticiones'}</span>`;
-  if(ex.isCardio){mSets=[{val:'',reps:''}];document.getElementById('mlAdd').style.display='none';}
-  else{mSets=Array.from({length:ex.sets||3},()=>({val:'',reps:''}));document.getElementById('mlAdd').style.display='';}
+  document.getElementById('mlHist').innerHTML=h;
+  document.getElementById('mlHint').innerHTML=`<span class="mu" style="font-size:13px">${ex.isCardio?'⏱ Tiempo en minutos':'Peso (kg) · Repeticiones'}</span>`;
+  if(ex.isCardio){
+    mSets=[{val:'',reps:''}];
+    document.getElementById('mlSetCountWrap').style.display='none';
+  }else{
+    const initialCount=ex.sets||3;
+    mSets=Array.from({length:initialCount},()=>({val:'',reps:''}));
+    document.getElementById('mlSetCountWrap').style.display='block';
+    renderSetCountBtns(initialCount);
+  }
   renderLogSets();document.getElementById('mdLog').style.display='flex';
 }
-function renderLogSets(){document.getElementById('mlSets').innerHTML=mEx.isCardio?`<div class="srow"><span class="slbl">Tiempo</span><input type="number" inputmode="decimal" placeholder="min" value="${mSets[0].val}" min="1" step="1" oninput="mSets[0].val=this.value"><span class="mu">min</span></div>`:mSets.map((s,i)=>`<div class="srow"><span class="slbl">Set ${i+1}</span><input type="number" inputmode="decimal" placeholder="kg" value="${s.val}" min="0" step="0.5" oninput="mSets[${i}].val=this.value" style="max-width:90px"><input type="number" inputmode="decimal" placeholder="reps" value="${s.reps}" min="1" step="1" oninput="mSets[${i}].reps=this.value" style="max-width:80px">${mSets.length>1?`<button class="btn btnsm" onclick="rmLS(${i})">×</button>`:''}</div>`).join('');}
-function addSet(){mSets.push({val:'',reps:''});renderLogSets();}
-function rmLS(i){if(mSets.length>1){mSets.splice(i,1);renderLogSets();}}
+
+function renderSetCountBtns(selected){
+  const options=[1,2,3,4,5,6,7,8];
+  document.getElementById('mlSetCountBtns').innerHTML=options.map(n=>
+    `<button type="button" class="set-count-btn ${n===selected?'active':''}" onclick="setSetCount(${n})">${n}</button>`
+  ).join('');
+}
+
+function setSetCount(n){
+  const current=mSets.length;
+  if(n>current){
+    for(let i=current;i<n;i++)mSets.push({val:'',reps:''});
+  }else if(n<current){
+    mSets=mSets.slice(0,n);
+  }
+  renderSetCountBtns(n);
+  renderLogSets();
+}
+
+function toggleReplaceInput(){
+  const checked=document.getElementById('mlReplaceCheck').checked;
+  document.getElementById('mlReplaceInputWrap').style.display=checked?'block':'none';
+  if(checked)document.getElementById('mlReplaceName').focus();
+}
+function renderLogSets(){document.getElementById('mlSets').innerHTML=mEx.isCardio?`<div class="srow"><span class="slbl">Tiempo</span><input type="number" inputmode="decimal" placeholder="min" value="${mSets[0].val}" min="1" step="1" oninput="mSets[0].val=this.value"><span class="mu">min</span></div>`:mSets.map((s,i)=>`<div class="srow"><span class="slbl">Set ${i+1}</span><input type="number" inputmode="decimal" placeholder="kg" value="${s.val}" min="0" step="0.5" oninput="mSets[${i}].val=this.value" style="max-width:90px"><input type="number" inputmode="decimal" placeholder="reps" value="${s.reps}" min="1" step="1" oninput="mSets[${i}].reps=this.value" style="max-width:80px"></div>`).join('');}
 function saveLog(){
   let filled=mEx.isCardio?[{val:mSets[0].val,reps:''}]:mSets.filter(s=>s.val&&s.reps);
-  if(!filled[0]||!filled[0].val){alert(mEx.isCardio?'Ingresa los minutos':'Ingresa kg y repeticiones');return;}
+  if(!filled[0]||!filled[0].val){alert(mEx.isCardio?'Ingresa los minutos':'Ingresa kg y repeticiones en al menos un set');return;}
+
+  const isReplaced=document.getElementById('mlReplaceCheck').checked;
+  const replaceName=document.getElementById('mlReplaceName').value.trim();
+  if(isReplaced&&!replaceName){alert('Escribe el nombre del ejercicio de reemplazo');return;}
+
   const key=mEx.name+'_w'+mWk+'_'+Date.now();
-  db.logs[key]={exercise:mEx.name,muscle:mEx.muscle,week:mWk,isCardio:mEx.isCardio,date:new Date().toISOString().split('T')[0],sets:filled};
-  lsave();refreshStats();renderDay(aday);closeM('mdLog');notif('✓ '+(mEx.isCardio?filled[0].val+' min':filled.map(s=>`${s.val}kg×${s.reps}`).join(', ')));
+  db.logs[key]={
+    exercise:mEx.name,muscle:mEx.muscle,week:mWk,isCardio:mEx.isCardio,
+    date:new Date().toISOString().split('T')[0],sets:filled,
+    replacedWith:isReplaced?replaceName:null
+  };
+
+  // Reflect replacement in the routine itself for this week/day
+  if(isReplaced&&replaceName&&aplan&&aplan.week===mWk){
+    aplan.days.forEach(day=>{
+      day.sections.forEach(sec=>{
+        sec.exercises.forEach(e=>{
+          if(e.name===mEx.name){
+            e.replacedWith=replaceName;
+          }
+        });
+      });
+    });
+    db.plans[mWk]=aplan;
+  }
+
+  lsave();refreshStats();renderDay(aday);closeM('mdLog');
+  const disp=mEx.isCardio?filled[0].val+' min':filled.map(s=>`${s.val}kg×${s.reps}`).join(', ');
+  notif(isReplaced?`✓ Reemplazado por "${replaceName}": ${disp}`:'✓ '+disp);
 }
 
 // ─── EDIT MODAL ───────────────────────────────────────────────────────────────
@@ -728,7 +998,194 @@ function renderWChart(){
 function closeM(id){document.getElementById(id).style.display='none';if(id==='mdDetail'&&dChart){dChart.destroy();dChart=null;}}
 let _nt;function notif(msg){const n=document.getElementById('ntf');n.textContent=msg;n.style.opacity='1';clearTimeout(_nt);_nt=setTimeout(()=>n.style.opacity='0',2800);}
 
-init();
+// ─── AUTH UI & FLOW ────────────────────────────────────────────────────────────
+let isRegisterMode=false;
+
+function waitForFirebase(){
+  return new Promise(resolve=>{
+    if(window.fbAuth){resolve();return;}
+    let resolved=false;
+    window.addEventListener('firebase-ready',()=>{resolved=true;resolve();},{once:true});
+    // Safety timeout: if Firebase never initializes (e.g. unauthorized domain,
+    // network block, or sandboxed preview), stop the spinner and show an error
+    // instead of hanging forever.
+    setTimeout(()=>{
+      if(!resolved){
+        console.error('Firebase no se inicializó a tiempo.');
+        resolve();
+      }
+    },8000);
+  });
+}
+
+function toggleAuthMode(){
+  isRegisterMode=!isRegisterMode;
+  document.getElementById('loginTitle').textContent=isRegisterMode?'Crear cuenta':'Iniciar sesión';
+  document.getElementById('loginSub').textContent=isRegisterMode?'Regístrate para guardar tus rutinas en la nube':'PULSE — tus rutinas, donde sea';
+  document.getElementById('loginSubmitBtn').textContent=isRegisterMode?'Crear cuenta':'Iniciar sesión';
+  document.getElementById('toggleText').textContent=isRegisterMode?'¿Ya tienes cuenta?':'¿No tienes cuenta?';
+  document.getElementById('toggleLink').textContent=isRegisterMode?'Inicia sesión':'Regístrate';
+  document.getElementById('forgotWrap').style.display=isRegisterMode?'none':'block';
+  hideLoginError();
+}
+function showLoginError(msg){const el=document.getElementById('loginError');el.textContent=msg;el.style.display='block';}
+function hideLoginError(){document.getElementById('loginError').style.display='none';}
+
+function translateAuthError(code){
+  const map={
+    'auth/invalid-email':'Correo electrónico inválido.',
+    'auth/user-disabled':'Esta cuenta ha sido deshabilitada.',
+    'auth/user-not-found':'No existe una cuenta con ese correo.',
+    'auth/wrong-password':'Contraseña incorrecta.',
+    'auth/invalid-credential':'Correo o contraseña incorrectos.',
+    'auth/email-already-in-use':'Ya existe una cuenta con ese correo.',
+    'auth/weak-password':'La contraseña debe tener al menos 6 caracteres.',
+    'auth/missing-password':'Ingresa una contraseña.',
+    'auth/too-many-requests':'Demasiados intentos. Espera un momento e intenta de nuevo.',
+    'auth/network-request-failed':'Error de conexión. Verifica tu internet.'
+  };
+  return map[code]||'Ocurrió un error. Intenta de nuevo.';
+}
+
+async function handleAuthSubmit(){
+  hideLoginError();
+  const email=document.getElementById('loginEmail').value.trim();
+  const password=document.getElementById('loginPassword').value;
+  if(!email||!password){showLoginError('Ingresa correo y contraseña.');return;}
+  const btn=document.getElementById('loginSubmitBtn');
+  const originalText=btn.textContent;
+  btn.disabled=true;btn.innerHTML='<span class="spinner"></span> Procesando...';
+  try{
+    if(isRegisterMode){await window.fbCreateUser(window.fbAuth,email,password);}
+    else{await window.fbSignIn(window.fbAuth,email,password);}
+  }catch(e){
+    showLoginError(translateAuthError(e.code));
+    btn.disabled=false;btn.textContent=originalText;
+  }
+}
+
+async function handleForgotPassword(){
+  const email=document.getElementById('loginEmail').value.trim();
+  if(!email){showLoginError('Escribe tu correo arriba primero, luego toca "¿Olvidaste tu contraseña?"');return;}
+  try{
+    await window.fbSendPasswordReset(window.fbAuth,email);
+    hideLoginError();
+    notif('✓ Te enviamos un correo para restablecer tu contraseña');
+  }catch(e){showLoginError(translateAuthError(e.code));}
+}
+
+async function handleLogout(){
+  if(!confirm('¿Cerrar sesión?'))return;
+  await window.fbSignOut(window.fbAuth);
+}
+
+async function startApp(){
+  await waitForFirebase();
+  if(!window.fbAuth){
+    // Firebase truly failed to load (blocked domain, no network, etc.)
+    document.getElementById('loadingScreen').style.display='none';
+    document.getElementById('loginScreen').style.display='flex';
+    showLoginError('No se pudo conectar con el servidor. Verifica tu conexión a internet y vuelve a intentar. Si el problema persiste, esta vista previa puede estar en un entorno restringido — abre el enlace real de tu app.');
+    return;
+  }
+  window.fbOnAuthStateChanged(window.fbAuth,async(user)=>{
+    document.getElementById('loadingScreen').style.display='none';
+    if(user){
+      currentUser=user;
+      document.getElementById('userEmailDisplay').textContent=user.email;
+      document.getElementById('loginScreen').style.display='none';
+      document.getElementById('appWrap').style.display='block';
+      await init();
+      document.getElementById('loginEmail').value='';
+      document.getElementById('loginPassword').value='';
+      const btn=document.getElementById('loginSubmitBtn');
+      btn.disabled=false;
+      btn.textContent=isRegisterMode?'Crear cuenta':'Iniciar sesión';
+    }else{
+      currentUser=null;
+      db={plans:{},logs:{},weights:[]};
+      document.getElementById('appWrap').style.display='none';
+      document.getElementById('loginScreen').style.display='flex';
+    }
+  });
+}
+
+// ─── PWA: Service Worker + Install Prompt ──────────────────────────────────────
+if('serviceWorker' in navigator){
+  window.addEventListener('load',()=>{
+    navigator.serviceWorker.register('sw.js').catch(e=>console.log('SW registration failed:',e));
+  });
+}
+
+let deferredInstallPrompt=null;
+window.addEventListener('beforeinstallprompt',(e)=>{
+  e.preventDefault();
+  deferredInstallPrompt=e;
+});
+
+function isIOS(){return /iphone|ipad|ipod/i.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);}
+function isAndroid(){return /android/i.test(navigator.userAgent);}
+function isStandalone(){return window.matchMedia('(display-mode: standalone)').matches||window.navigator.standalone===true;}
+
+async function handleDownloadClick(platform){
+  if(isStandalone()){
+    notif('Ya tienes la app instalada 🎉');
+    return;
+  }
+  if(platform==='android'){
+    if(deferredInstallPrompt){
+      // Native browser install prompt — runs the install steps automatically
+      deferredInstallPrompt.prompt();
+      const result=await deferredInstallPrompt.userChoice;
+      deferredInstallPrompt=null;
+      if(result.outcome==='accepted'){
+        notif('✓ Instalando PULSE...');
+      }
+    }else if(isAndroid()){
+      // Chrome/Android but prompt not ready yet or already dismissed once this session
+      showIOSInstallModal('android-fallback');
+    }else{
+      // Not on an Android device — installing isn't possible from here
+      alert('La instalación automática solo está disponible en Chrome para Android. Abre este enlace desde tu teléfono Android en Chrome.');
+    }
+  }else if(platform==='ios'){
+    showIOSInstallModal('ios');
+  }
+}
+
+function showIOSInstallModal(variant){
+  document.getElementById('installModalTitle').textContent = variant==='ios' ? 'Instalar en iPhone' : 'Instalar en Android';
+  document.getElementById('installModalSteps').innerHTML = variant==='ios' ? `
+    <div class="install-step">
+      <span class="install-step-num">1</span>
+      <span>Toca el botón de Compartir <i class="ti ti-square-arrow-up" style="vertical-align:middle"></i> en la barra de Safari</span>
+    </div>
+    <div class="install-step">
+      <span class="install-step-num">2</span>
+      <span>Desliza hacia abajo y selecciona <b>"Agregar a pantalla de inicio"</b></span>
+    </div>
+    <div class="install-step">
+      <span class="install-step-num">3</span>
+      <span>Toca <b>"Agregar"</b> en la esquina superior derecha</span>
+    </div>
+  ` : `
+    <div class="install-step">
+      <span class="install-step-num">1</span>
+      <span>Toca el menú <b>⋮</b> (tres puntos) arriba a la derecha de Chrome</span>
+    </div>
+    <div class="install-step">
+      <span class="install-step-num">2</span>
+      <span>Selecciona <b>"Instalar app"</b> o <b>"Agregar a pantalla de inicio"</b></span>
+    </div>
+    <div class="install-step">
+      <span class="install-step-num">3</span>
+      <span>Confirma tocando <b>"Instalar"</b></span>
+    </div>
+  `;
+  document.getElementById('installModal').style.display='flex';
+}
+
+startApp();
 </script>
 </body>
 </html>
