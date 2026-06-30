@@ -15,9 +15,10 @@
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@2.44.0/tabler-icons.min.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-  import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged, sendPasswordResetEmail } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+  import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged, sendPasswordResetEmail, updatePassword, reauthenticateWithCredential, EmailAuthProvider } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
   import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
   const firebaseConfig = {
@@ -41,6 +42,9 @@
   window.fbSignOut = signOut;
   window.fbOnAuthStateChanged = onAuthStateChanged;
   window.fbSendPasswordReset = sendPasswordResetEmail;
+  window.fbUpdatePassword = updatePassword;
+  window.fbReauthenticate = reauthenticateWithCredential;
+  window.fbEmailAuthProvider = EmailAuthProvider;
   window.fbDoc = doc;
   window.fbGetDoc = getDoc;
   window.fbSetDoc = setDoc;
@@ -169,6 +173,31 @@ button{cursor:pointer;font-family:inherit}
 .user-bar-email{color:var(--text2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:200px;font-size:11px}
 .sync-indicator{font-size:11px;color:var(--text2);display:flex;align-items:center;gap:4px}
 .sync-indicator.syncing{color:var(--green)}
+/* Settings menu */
+.settings-menu-wrap{position:relative}
+.settings-btn{background:none;border:1px solid var(--border);color:var(--text2);width:30px;height:30px;border-radius:8px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:15px;transition:.15s}
+.settings-btn:hover,.settings-btn.active{color:var(--text);background:var(--bg2)}
+.settings-dropdown{position:absolute;top:38px;right:0;background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-sm);box-shadow:0 8px 24px rgba(0,0,0,.18);min-width:210px;padding:6px;z-index:80;animation:settingsDropIn .15s ease}
+@keyframes settingsDropIn{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:translateY(0)}}
+.settings-item{width:100%;display:flex;align-items:center;gap:9px;padding:9px 10px;background:none;border:none;border-radius:7px;font-size:13px;color:var(--text);cursor:pointer;text-align:left}
+.settings-item:hover{background:var(--bg2)}
+.settings-item i{font-size:16px;color:var(--text2);width:18px;text-align:center}
+.settings-item-danger{color:var(--red)}
+.settings-item-danger i{color:var(--red)}
+.settings-item-suffix{margin-left:auto;font-size:11px;color:var(--text2);font-weight:500}
+.settings-divider{height:1px;background:var(--border);margin:5px 4px}
+/* kg/lb unit toggle */
+.unit-toggle{display:flex;background:var(--bg2);border:1px solid var(--border);border-radius:7px;padding:2px;gap:2px}
+.unit-toggle-btn{border:none;background:none;font-size:11px;font-weight:600;padding:3px 9px;border-radius:5px;color:var(--text2);cursor:pointer}
+.unit-toggle-btn.active{background:var(--green);color:#fff}
+/* Language selection modal */
+.lang-option{display:flex;align-items:center;gap:12px;padding:14px;border:1px solid var(--border);border-radius:var(--radius-sm);cursor:pointer;margin-bottom:10px;transition:.15s}
+.lang-option:hover{background:var(--bg2)}
+.lang-option.selected{border-color:var(--green);background:var(--green-light)}
+.lang-flag{font-size:24px}
+.lang-name{flex:1;font-size:14px;font-weight:600}
+.lang-check{font-size:18px;color:var(--green);visibility:hidden}
+.lang-option.selected .lang-check{visibility:visible}
 /* Download bar — subtle, below login box */
 .download-bar{display:flex;align-items:center;gap:10px;opacity:.55;transition:opacity .2s}
 .download-bar:hover{opacity:.85}
@@ -198,18 +227,18 @@ button{cursor:pointer;font-family:inherit}
     <div class="login-error" id="loginError"></div>
 
     <div class="login-field">
-      <label>Correo electrónico</label>
+      <label data-i18n="email_label">Correo electrónico</label>
       <input type="email" id="loginEmail" placeholder="tu@correo.com" autocomplete="email">
     </div>
     <div class="login-field">
-      <label>Contraseña</label>
+      <label data-i18n="password_label">Contraseña</label>
       <input type="password" id="loginPassword" placeholder="••••••••" autocomplete="current-password" onkeydown="if(event.key==='Enter')handleAuthSubmit()">
     </div>
 
     <button class="btn btnp btn-block" id="loginSubmitBtn" onclick="handleAuthSubmit()">Iniciar sesión</button>
 
     <div class="login-forgot" id="forgotWrap">
-      <a onclick="handleForgotPassword()">¿Olvidaste tu contraseña?</a>
+      <a onclick="handleForgotPassword()" data-i18n="forgot_password">¿Olvidaste tu contraseña?</a>
     </div>
 
     <div class="login-toggle">
@@ -218,7 +247,7 @@ button{cursor:pointer;font-family:inherit}
   </div>
 
   <div class="download-bar">
-    <span class="download-label">Descargar para</span>
+    <span class="download-label" data-i18n="install_for">Descargar para</span>
     <button class="download-icon-btn" onclick="handleDownloadClick('ios')" aria-label="Descargar para iPhone">
       <i class="ti ti-brand-apple"></i>
     </button>
@@ -234,7 +263,7 @@ button{cursor:pointer;font-family:inherit}
   <div class="mhdr"><span id="installModalTitle" style="font-size:16px;font-weight:700"></span><button class="xbtn" onclick="closeM('installModal')">×</button></div>
   <img src="icon-192.png" alt="" style="width:56px;height:56px;border-radius:14px;margin:4px 0 16px">
   <div id="installModalSteps"></div>
-  <button class="btn btnp btn-block" onclick="closeM('installModal')" style="margin-top:8px">Entendido</button>
+  <button class="btn btnp btn-block" onclick="closeM('installModal')" style="margin-top:8px" data-i18n="got_it">Entendido</button>
 </div>
 </div>
 
@@ -249,27 +278,56 @@ button{cursor:pointer;font-family:inherit}
     </div>
   </div>
   <div class="flex-row" style="gap:10px">
-    <span class="sync-indicator" id="syncIndicator"><i class="ti ti-cloud-check"></i> Sincronizado</span>
-    <button class="btn btnsm" onclick="handleLogout()"><i class="ti ti-logout"></i> Salir</button>
+    <span class="sync-indicator" id="syncIndicator"><i class="ti ti-cloud-check"></i> <span data-i18n="header_synced">Sincronizado</span></span>
+    <div class="settings-menu-wrap">
+      <button class="settings-btn" onclick="toggleSettingsMenu()" id="settingsBtn" aria-label="Ajustes">
+        <i class="ti ti-settings"></i>
+      </button>
+      <div class="settings-dropdown" id="settingsDropdown" style="display:none">
+        <button class="settings-item" onclick="openChangePasswordModal()">
+          <i class="ti ti-key"></i> <span data-i18n="settings_change_password">Cambiar contraseña</span>
+        </button>
+        <button class="settings-item" onclick="openExportModal()">
+          <i class="ti ti-file-spreadsheet"></i> <span data-i18n="settings_export_excel">Exportar a Excel</span>
+        </button>
+        <button class="settings-item" onclick="triggerImportExcel()">
+          <i class="ti ti-upload"></i> <span data-i18n="settings_import_excel">Importar desde Excel</span>
+        </button>
+        <input type="file" id="excelImportInput" accept=".xlsx" style="display:none" onchange="handleExcelImport(this)">
+        <div class="settings-divider"></div>
+        <button class="settings-item" onclick="openLanguageModal()">
+          <i class="ti ti-language"></i> <span data-i18n="settings_language">Idioma</span>
+          <span class="settings-item-suffix" id="langSuffix">Español</span>
+        </button>
+        <div class="settings-divider"></div>
+        <button class="settings-item settings-item-danger" onclick="openResetDataModal()">
+          <i class="ti ti-trash"></i> <span data-i18n="settings_reset_data">Resetear mis datos</span>
+        </button>
+        <div class="settings-divider"></div>
+        <button class="settings-item" onclick="handleLogout()">
+          <i class="ti ti-logout"></i> <span data-i18n="settings_logout">Cerrar sesión</span>
+        </button>
+      </div>
+    </div>
   </div>
 </div>
 
 <nav class="nav">
-  <button class="nb active" onclick="showPage('upload',this)"><i class="ti ti-upload"></i>PDFs</button>
-  <button class="nb" onclick="showPage('workout',this)"><i class="ti ti-dumbbell"></i>Rutina</button>
-  <button class="nb" onclick="showPage('history',this)"><i class="ti ti-history"></i>Historial</button>
-  <button class="nb" onclick="showPage('weight',this)"><i class="ti ti-scale"></i>Mi peso</button>
+  <button class="nb active" onclick="showPage('upload',this)"><i class="ti ti-upload"></i><span data-i18n="nav_pdfs">PDFs</span></button>
+  <button class="nb" onclick="showPage('workout',this)"><i class="ti ti-barbell"></i><span data-i18n="nav_routine">Rutina</span></button>
+  <button class="nb" onclick="showPage('history',this)"><i class="ti ti-history"></i><span data-i18n="nav_history">Historial</span></button>
+  <button class="nb" onclick="showPage('weight',this)"><i class="ti ti-scale"></i><span data-i18n="nav_weight">Mi peso</span></button>
 </nav>
 
 <!-- UPLOAD -->
 <div id="pg-upload" class="pg active">
   <div class="card">
-    <div class="ttl">Subir plan de entrenamiento</div>
-    <p class="mu" style="margin-bottom:14px">Sube el PDF de tu entrenador. El sistema lee directamente los nombres de los ejercicios del archivo.</p>
+    <div class="ttl" data-i18n="upload_title">Subir plan de entrenamiento</div>
+    <p class="mu" style="margin-bottom:14px" data-i18n="upload_desc">Sube el PDF de tu entrenador. El sistema lee directamente los nombres de los ejercicios del archivo.</p>
     <div class="uzone" onclick="document.getElementById('pdfIn').click()">
       <i class="ti ti-file-type-pdf" style="font-size:40px;color:var(--text2);display:block;margin-bottom:8px"></i>
-      <div style="font-weight:600;margin-bottom:4px">Toca para seleccionar PDF</div>
-      <div class="mu" style="font-size:13px">Plan_Semana_1.pdf · Semana_2.pdf · etc.</div>
+      <div style="font-weight:600;margin-bottom:4px" data-i18n="upload_tap">Toca para seleccionar PDF</div>
+      <div class="mu" style="font-size:13px" data-i18n="upload_example">Plan_Semana_1.pdf · Semana_2.pdf · etc.</div>
     </div>
     <input type="file" id="pdfIn" accept=".pdf" style="display:none" onchange="handleUpload(this)">
     <div id="uploadStatus" style="display:none;margin-top:14px">
@@ -282,47 +340,47 @@ button{cursor:pointer;font-family:inherit}
   <!-- REVIEW CARD -->
   <div class="card" id="reviewCard" style="display:none">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
-      <div class="ttl" style="margin:0" id="reviewTitle">Revisar ejercicios</div>
+      <div class="ttl" style="margin:0" id="reviewTitle" data-i18n="review_title">Revisar ejercicios</div>
     </div>
-    <p class="mu" style="margin-bottom:14px;font-size:13px">Verifica y edita los ejercicios antes de confirmar. Toca ✏️ para editar un nombre, o + para añadir uno.</p>
+    <p class="mu" style="margin-bottom:14px;font-size:13px" data-i18n="review_desc">Verifica y edita los ejercicios antes de confirmar. Toca ✏️ para editar un nombre, o + para añadir uno.</p>
     <div id="reviewContent"></div>
     <div class="flex-row" style="margin-top:16px">
-      <button class="btn btnd btnsm" onclick="cancelReview()">Cancelar</button>
-      <button class="btn btnp" onclick="confirmReview()" style="flex:1">✓ Confirmar y cargar</button>
+      <button class="btn btnd btnsm" onclick="cancelReview()" data-i18n="review_cancel">Cancelar</button>
+      <button class="btn btnp" onclick="confirmReview()" style="flex:1" id="reviewConfirmBtn">✓ <span data-i18n="review_confirm">Confirmar y cargar</span></button>
     </div>
   </div>
 
   <div class="card" id="cLoaded" style="display:none">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
-      <div class="ttl" style="margin:0">Rutinas cargadas</div>
+      <div class="ttl" style="margin:0" data-i18n="loaded_routines">Rutinas cargadas</div>
       <button class="btn btnsm btnd" onclick="toggleC('delAll')"><i class="ti ti-trash"></i></button>
     </div>
     <div id="loadedList"></div>
     <div id="delAll" style="display:none" class="cbox">
-      <div style="font-size:14px;font-weight:600;margin-bottom:6px">¿Borrar todas las semanas?</div>
-      <div class="mu" style="margin-bottom:10px;font-size:13px">Los registros de ejercicios se conservan.</div>
-      <div class="flex-row"><button class="btn btnsm btnd" onclick="deleteAllWeeks()">Sí, borrar todas</button><button class="btn btnsm" onclick="toggleC('delAll')">Cancelar</button></div>
+      <div style="font-size:14px;font-weight:600;margin-bottom:6px" data-i18n="confirm_delete_all_title">¿Borrar todas las semanas?</div>
+      <div class="mu" style="margin-bottom:10px;font-size:13px" data-i18n="confirm_delete_all_desc">Los registros de ejercicios se conservan.</div>
+      <div class="flex-row"><button class="btn btnsm btnd" onclick="deleteAllWeeks()" data-i18n="yes_delete_all">Sí, borrar todas</button><button class="btn btnsm" onclick="toggleC('delAll')" data-i18n="cancel">Cancelar</button></div>
     </div>
   </div>
 
   <div class="card" id="cStats" style="display:none">
-    <div class="ttl">Estadísticas generales</div>
+    <div class="ttl" data-i18n="general_stats">Estadísticas generales</div>
     <div class="metrics">
-      <div class="met"><div class="mv" id="stW">0</div><div class="mlb">Semanas</div></div>
-      <div class="met"><div class="mv" id="stE">0</div><div class="mlb">Ejercicios</div></div>
-      <div class="met"><div class="mv" id="stL">0</div><div class="mlb">Registros</div></div>
-      <div class="met"><div class="mv" id="stP">0</div><div class="mlb">PRs 🏆</div></div>
+      <div class="met"><div class="mv" id="stW">0</div><div class="mlb" data-i18n="stat_weeks">Semanas</div></div>
+      <div class="met"><div class="mv" id="stE">0</div><div class="mlb" data-i18n="stat_exercises">Ejercicios</div></div>
+      <div class="met"><div class="mv" id="stL">0</div><div class="mlb" data-i18n="stat_records">Registros</div></div>
+      <div class="met"><div class="mv" id="stP">0</div><div class="mlb" data-i18n="stat_prs">PRs 🏆</div></div>
     </div>
   </div>
 
   <div class="card">
-    <div class="ttl" style="color:var(--red)">Zona de peligro</div>
-    <p class="mu" style="margin-bottom:12px;font-size:13px">Borra todos los datos incluyendo registros y peso corporal.</p>
-    <button class="btn btnd" onclick="toggleC('resetAll')"><i class="ti ti-refresh"></i> Resetear todo</button>
+    <div class="ttl" style="color:var(--red)" data-i18n="danger_zone">Zona de peligro</div>
+    <p class="mu" style="margin-bottom:12px;font-size:13px" data-i18n="danger_zone_desc">Borra todos los datos incluyendo registros y peso corporal.</p>
+    <button class="btn btnd" onclick="toggleC('resetAll')"><i class="ti ti-refresh"></i> <span data-i18n="reset_all">Resetear todo</span></button>
     <div id="resetAll" style="display:none" class="cbox">
-      <div style="font-size:14px;font-weight:600;color:var(--red);margin-bottom:6px">⚠️ ¿Estás seguro?</div>
-      <div class="mu" style="margin-bottom:10px;font-size:13px">Se borrarán <b>todos</b> los planes, registros y datos de peso. No se puede deshacer.</div>
-      <div class="flex-row"><button class="btn btnsm btnd" onclick="doReset()">Sí, borrar todo</button><button class="btn btnsm" onclick="toggleC('resetAll')">Cancelar</button></div>
+      <div style="font-size:14px;font-weight:600;color:var(--red);margin-bottom:6px" data-i18n="confirm_reset_title">⚠️ ¿Estás seguro?</div>
+      <div class="mu" style="margin-bottom:10px;font-size:13px" id="confirmResetDescText">Se borrarán <b>todos</b> los planes, registros y datos de peso. No se puede deshacer.</div>
+      <div class="flex-row"><button class="btn btnsm btnd" onclick="doReset()" data-i18n="yes_delete_everything">Sí, borrar todo</button><button class="btn btnsm" onclick="toggleC('resetAll')" data-i18n="cancel">Cancelar</button></div>
     </div>
   </div>
 </div>
@@ -330,8 +388,8 @@ button{cursor:pointer;font-family:inherit}
 <!-- WORKOUT -->
 <div id="pg-workout" class="pg">
   <div class="card">
-    <div class="ttl">Selecciona semana</div>
-    <select id="wkSel" onchange="loadDays()"><option value="">— Semana —</option></select>
+    <div class="ttl" data-i18n="select_week">Selecciona semana</div>
+    <select id="wkSel" onchange="loadDays()"><option value="" data-i18n="week_placeholder">— Semana —</option></select>
     <div class="day-tabs" id="dayTabs"></div>
   </div>
   <div id="wkEx"></div>
@@ -339,7 +397,7 @@ button{cursor:pointer;font-family:inherit}
 
 <!-- HISTORY -->
 <div id="pg-history" class="pg">
-  <div class="sw"><i class="ti ti-search sic"></i><input type="text" id="srch" placeholder="Buscar ejercicio..." oninput="renderHistory()"></div>
+  <div class="sw"><i class="ti ti-search sic"></i><input type="text" id="srch" placeholder="Buscar ejercicio..." oninput="renderHistory()" data-i18n-placeholder="search_placeholder"></div>
   <div class="mf-wrap" id="mfBtns"></div>
   <div class="card" style="padding:0 16px"><div id="histList"></div></div>
 </div>
@@ -347,17 +405,26 @@ button{cursor:pointer;font-family:inherit}
 <!-- WEIGHT -->
 <div id="pg-weight" class="pg">
   <div class="card">
-    <div class="ttl">Registrar peso semanal</div>
+    <div class="ttl" data-i18n="weight_register_title">Registrar peso semanal</div>
     <div class="g2" style="margin-bottom:10px">
-      <div><div class="mu" style="margin-bottom:4px;font-size:13px">Fecha</div><input type="date" id="wDate"></div>
-      <div><div class="mu" style="margin-bottom:4px;font-size:13px">Peso (kg)</div><input type="number" id="wKg" placeholder="82.5" step="0.1" min="30" max="300"></div>
+      <div><div class="mu" style="margin-bottom:4px;font-size:13px" data-i18n="date_field">Fecha</div><input type="date" id="wDate"></div>
+      <div>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
+          <span class="mu" style="font-size:13px" data-i18n="weight_field">Peso</span>
+          <div class="unit-toggle">
+            <button type="button" class="unit-toggle-btn active" id="unitKgBtn" onclick="setWeightUnit('kg')">kg</button>
+            <button type="button" class="unit-toggle-btn" id="unitLbBtn" onclick="setWeightUnit('lb')">lb</button>
+          </div>
+        </div>
+        <input type="number" id="wKg" placeholder="82.5" step="0.1" min="1" max="700">
+      </div>
     </div>
-    <div style="margin-bottom:12px"><div class="mu" style="margin-bottom:4px;font-size:13px">Notas</div><input type="text" id="wNotes" placeholder="Opcional..."></div>
-    <button class="btn btnp btn-block" onclick="saveWeight()">Guardar peso</button>
+    <div style="margin-bottom:12px"><div class="mu" style="margin-bottom:4px;font-size:13px" data-i18n="notes_field">Notas</div><input type="text" id="wNotes" placeholder="Opcional..." data-i18n-placeholder="notes_placeholder"></div>
+    <button class="btn btnp btn-block" onclick="saveWeight()" data-i18n="save_weight">Guardar peso</button>
   </div>
   <div class="card">
-    <div class="ttl">Evolución de peso corporal</div>
-    <div id="wChart"><div style="text-align:center;padding:24px;color:var(--text2)">Sin registros aún</div></div>
+    <div class="ttl" data-i18n="weight_evolution">Evolución de peso corporal</div>
+    <div id="wChart"><div style="text-align:center;padding:24px;color:var(--text2)" data-i18n="no_records_yet">Sin registros aún</div></div>
     <div id="wLog" style="margin-top:8px"></div>
   </div>
 </div>
@@ -372,28 +439,28 @@ button{cursor:pointer;font-family:inherit}
   <div class="replace-box">
     <label class="replace-label">
       <input type="checkbox" id="mlReplaceCheck" onchange="toggleReplaceInput()">
-      <span>Reemplazar ejercicio</span>
+      <span data-i18n="replace_exercise">Reemplazar ejercicio</span>
     </label>
     <div id="mlReplaceInputWrap" style="display:none;margin-top:8px">
-      <div class="mu" style="font-size:12px;margin-bottom:4px">¿Qué ejercicio hiciste en su lugar?</div>
-      <input type="text" id="mlReplaceName" placeholder="Nombre del ejercicio reemplazo">
+      <div class="mu" style="font-size:12px;margin-bottom:4px" data-i18n="replace_question">¿Qué ejercicio hiciste en su lugar?</div>
+      <input type="text" id="mlReplaceName" placeholder="Nombre del ejercicio reemplazo" data-i18n-placeholder="replace_name_placeholder">
     </div>
   </div>
 
   <div id="mlHist"></div>
 
-  <div style="font-size:14px;font-weight:600;margin-bottom:8px">Registrar hoy</div>
+  <div style="font-size:14px;font-weight:600;margin-bottom:8px" data-i18n="register_today">Registrar hoy</div>
   <div id="mlHint" style="margin-bottom:10px"></div>
 
   <!-- Set count selector -->
   <div id="mlSetCountWrap" style="margin-bottom:12px">
-    <div class="mu" style="font-size:13px;margin-bottom:6px">Número de sets</div>
+    <div class="mu" style="font-size:13px;margin-bottom:6px" data-i18n="sets_count">Número de sets</div>
     <div class="set-count-row" id="mlSetCountBtns"></div>
   </div>
 
   <div id="mlSets"></div>
   <div class="flex-row" style="margin-top:16px">
-    <button class="btn btnp" onclick="saveLog()" style="flex:1">Guardar <i class="ti ti-check"></i></button>
+    <button class="btn btnp" onclick="saveLog()" style="flex:1"><span data-i18n="save">Guardar</span> <i class="ti ti-check"></i></button>
   </div>
 </div>
 </div>
@@ -403,11 +470,11 @@ button{cursor:pointer;font-family:inherit}
 <div class="mdl">
   <div class="mhdr"><span id="meName" style="font-size:14px;line-height:1.3"></span><button class="xbtn" onclick="closeM('mdEdit')">×</button></div>
   <div id="meBadge" style="margin-bottom:12px"></div>
-  <div style="font-size:14px;font-weight:600;margin-bottom:10px">Editar registro</div>
+  <div style="font-size:14px;font-weight:600;margin-bottom:10px" data-i18n="edit_record">Editar registro</div>
   <div id="meSets"></div>
   <div class="flex-row" style="margin-top:16px">
-    <button class="btn btnd" onclick="deleteLog()" style="flex:1"><i class="ti ti-trash"></i> Borrar</button>
-    <button class="btn btnp" onclick="updateLog()" style="flex:2">Guardar cambios</button>
+    <button class="btn btnd" onclick="deleteLog()" style="flex:1"><i class="ti ti-trash"></i> <span data-i18n="delete">Borrar</span></button>
+    <button class="btn btnp" onclick="updateLog()" style="flex:2" data-i18n="save_changes">Guardar cambios</button>
   </div>
 </div>
 </div>
@@ -422,13 +489,389 @@ button{cursor:pointer;font-family:inherit}
 </div>
 </div>
 
+<!-- MODAL: cambiar contraseña -->
+<div id="mdPassword" style="display:none" class="mdbg" onclick="if(event.target===this)closeM('mdPassword')">
+<div class="mdl">
+  <div class="mhdr"><span style="font-size:16px;font-weight:700" data-i18n="change_password_title">Cambiar contraseña</span><button class="xbtn" onclick="closeM('mdPassword')">×</button></div>
+  <p class="mu" style="margin-bottom:14px;font-size:13px" data-i18n="change_password_desc">Por seguridad, ingresa tu contraseña actual antes de cambiarla.</p>
+  <div class="login-error" id="pwError"></div>
+  <div class="login-field">
+    <label data-i18n="current_password">Contraseña actual</label>
+    <input type="password" id="pwCurrent" autocomplete="current-password">
+  </div>
+  <div class="login-field">
+    <label data-i18n="new_password">Nueva contraseña</label>
+    <input type="password" id="pwNew" autocomplete="new-password" placeholder="Mínimo 6 caracteres" data-i18n-placeholder="new_password_placeholder">
+  </div>
+  <div class="login-field">
+    <label data-i18n="confirm_new_password">Confirmar nueva contraseña</label>
+    <input type="password" id="pwConfirm" autocomplete="new-password">
+  </div>
+  <button class="btn btnp btn-block" id="pwSubmitBtn" onclick="handleChangePassword()" data-i18n="update_password">Actualizar contraseña</button>
+</div>
+</div>
+
+<!-- MODAL: exportar a excel -->
+<div id="mdExport" style="display:none" class="mdbg" onclick="if(event.target===this)closeM('mdExport')">
+<div class="mdl">
+  <div class="mhdr"><span style="font-size:16px;font-weight:700" data-i18n="export_title">Exportar a Excel</span><button class="xbtn" onclick="closeM('mdExport')">×</button></div>
+  <p class="mu" style="margin-bottom:16px;font-size:13px" data-i18n="export_desc">Descarga todos tus registros (ejercicios, sets, repeticiones y peso corporal) en un archivo .xlsx. Puedes usarlo como respaldo o para volver a cargar tus datos si tu sesión se borra.</p>
+  <button class="btn btnp btn-block" onclick="exportToExcel()"><i class="ti ti-download"></i> <span data-i18n="download_excel">Descargar Excel</span></button>
+</div>
+</div>
+
+<!-- MODAL: idioma -->
+<div id="mdLanguage" style="display:none" class="mdbg" onclick="if(event.target===this)closeM('mdLanguage')">
+<div class="mdl">
+  <div class="mhdr"><span style="font-size:16px;font-weight:700" data-i18n="language_title">Idioma</span><button class="xbtn" onclick="closeM('mdLanguage')">×</button></div>
+  <p class="mu" style="margin-bottom:16px;font-size:13px" data-i18n="language_desc">Selecciona el idioma de la aplicación.</p>
+  <div class="lang-option" id="langOptionEs" onclick="setLanguage('es')">
+    <span class="lang-flag">🇪🇸</span>
+    <span class="lang-name">Español</span>
+    <i class="ti ti-check lang-check" id="langCheckEs"></i>
+  </div>
+  <div class="lang-option" id="langOptionEn" onclick="setLanguage('en')">
+    <span class="lang-flag">🇺🇸</span>
+    <span class="lang-name">English</span>
+    <i class="ti ti-check lang-check" id="langCheckEn"></i>
+  </div>
+</div>
+</div>
+
+<!-- MODAL: confirmar reset -->
+<div id="mdResetConfirm" style="display:none" class="mdbg" onclick="if(event.target===this)closeM('mdResetConfirm')">
+<div class="mdl">
+  <div class="mhdr"><span style="font-size:16px;font-weight:700;color:var(--red)" data-i18n="reset_data_title">⚠️ Resetear mis datos</span><button class="xbtn" onclick="closeM('mdResetConfirm')">×</button></div>
+  <p class="mu" style="margin-bottom:10px;font-size:14px" data-i18n="reset_data_will_delete">Esto borrará permanentemente:</p>
+  <ul style="margin:0 0 16px 18px;padding:0;font-size:13px;color:var(--text2);line-height:1.8">
+    <li data-i18n="reset_item1">Todas las rutinas cargadas</li>
+    <li data-i18n="reset_item2">Todos los registros de ejercicios (kg, reps)</li>
+    <li data-i18n="reset_item3">Todo tu historial de peso corporal</li>
+  </ul>
+  <p class="mu" style="margin-bottom:16px;font-size:13px" id="resetWarningText">Tu cuenta seguirá existiendo, pero quedará completamente vacía, como nueva. <b>Esta acción no se puede deshacer.</b></p>
+  <div class="flex-row">
+    <button class="btn" onclick="closeM('mdResetConfirm')" style="flex:1" data-i18n="cancel">Cancelar</button>
+    <button class="btn btnd" onclick="confirmResetData()" style="flex:1" data-i18n="yes_delete_everything">Sí, borrar todo</button>
+  </div>
+</div>
+</div>
+
+
 <div class="ntf" id="ntf"></div>
 </div><!-- /#appWrap -->
 
 <script>
 pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 
+// ─── I18N: Translation system ───────────────────────────────────────────────────
+const I18N={
+  es:{
+    // Nav
+    nav_pdfs:'PDFs', nav_routine:'Rutina', nav_history:'Historial', nav_weight:'Mi peso',
+    // Header
+    header_synced:'Sincronizado', header_saving:'Guardando...', header_save_error:'Error al guardar',
+    // Settings menu
+    settings_change_password:'Cambiar contraseña', settings_export_excel:'Exportar a Excel',
+    settings_import_excel:'Importar desde Excel', settings_language:'Idioma',
+    settings_reset_data:'Resetear mis datos', settings_logout:'Cerrar sesión',
+    // Upload page
+    upload_title:'Subir plan de entrenamiento',
+    upload_desc:'Sube el PDF de tu entrenador. El sistema lee directamente los nombres de los ejercicios del archivo.',
+    upload_tap:'Toca para seleccionar PDF',
+    upload_example:'Plan_Semana_1.pdf · Semana_2.pdf · etc.',
+    upload_reading:'Leyendo PDF...', upload_extracting:'Extrayendo texto...',
+    upload_processing:'Procesando...', upload_analyzing:'Analizando',upload_pages:'páginas...',
+    upload_identifying:'Identificando ejercicios...', upload_assigning:'Asignando grupos musculares...',
+    upload_no_exercises:'No se encontraron ejercicios en este PDF',
+    upload_check_pdf:'Asegúrate de subir el PDF del plan de entrenamiento de tu entrenador.',
+    upload_processed:'PDF procesado correctamente',
+    upload_week:'Semana', upload_days:'días', upload_exercises_found:'ejercicios encontrados',
+    upload_error:'Error',
+    review_title:'Revisar ejercicios',
+    review_desc:'Verifica y edita los ejercicios antes de confirmar. Toca ✏️ para editar un nombre, o + para añadir uno.',
+    review_cancel:'Cancelar', review_confirm:'Confirmar y cargar',
+    review_add:'+ Añadir',
+    loaded_routines:'Rutinas cargadas',
+    confirm_delete_all_title:'¿Borrar todas las semanas?',
+    confirm_delete_all_desc:'Los registros de ejercicios se conservan.',
+    yes_delete_all:'Sí, borrar todas', cancel:'Cancelar',
+    general_stats:'Estadísticas generales',
+    stat_weeks:'Semanas', stat_exercises:'Ejercicios', stat_records:'Registros', stat_prs:'PRs 🏆',
+    danger_zone:'Zona de peligro',
+    danger_zone_desc:'Borra todos los datos incluyendo registros y peso corporal.',
+    reset_all:'Resetear todo',
+    confirm_reset_title:'⚠️ ¿Estás seguro?',
+    confirm_reset_desc:'Se borrarán <b>todos</b> los planes, registros y datos de peso. No se puede deshacer.',
+    yes_delete_everything:'Sí, borrar todo',
+    week_loaded:'cargada', delete_week_confirm:'¿Borrar Semana',
+    delete_week_desc:'El plan se elimina. Los registros se conservan.',
+    yes_delete:'Sí, borrar',
+    // Workout page
+    select_week:'Selecciona semana', week_placeholder:'— Semana —',
+    sets_label:'serie(s)', last_label:'Última', records_label:'reg.',
+    log_btn:'+ Log',
+    // History page
+    search_placeholder:'Buscar ejercicio...', all_filter:'Todos',
+    no_exercises_yet:'Sin ejercicios aún.', upload_pdf_first:'Sube un PDF primero.',
+    no_records:'Sin registros — usa "+ Log" en Rutina', no_data_label:'Sin datos',
+    max_label:'Máx', see_more:'Ver →', records_count:'reg.',
+    max_kg_per_session:'Máx kg por sesión', no_records_use_log:'Sin registros aún.<br>Usa "+ Log" en Rutina.',
+    // Weight page
+    weight_register_title:'Registrar peso semanal',
+    weight_field:'Peso', date_field:'Fecha', notes_field:'Notas', notes_placeholder:'Opcional...',
+    save_weight:'Guardar peso', weight_evolution:'Evolución de peso corporal',
+    no_records_yet:'Sin registros aún',
+    current_label:'Actual', min_label:'Mínimo', change_label:'Cambio',
+    // Modals
+    register_today:'Registrar hoy', sets_count:'Número de sets',
+    history_previous:'Historial previo', first_time:'Primera vez que realizas este ejercicio 💪',
+    weight_kg_reps:'Peso (kg) · Repeticiones', time_minutes:'⏱ Tiempo en minutos', time_label:'Tiempo',
+    save:'Guardar', edit_record:'Editar registro', delete:'Borrar', save_changes:'Guardar cambios',
+    all_records:'Todos los registros', tap_to_see_progress:'Toca para ver progreso y editar',
+    replace_exercise:'Reemplazar ejercicio', replace_question:'¿Qué ejercicio hiciste en su lugar?',
+    replace_name_placeholder:'Nombre del ejercicio reemplazo',
+    replaced_label:'Reemplazado', replaced_by:'Reemplazado por',
+    edit_name:'Editar nombre', series_label:'Series', reps_label:'Reps',
+    view_on_youtube:'Ver en YouTube',
+    install_for:'Descargar para',
+    install_ios_title:'Instalar en iPhone', install_android_title:'Instalar en Android',
+    install_ios_step1:'Toca el botón de Compartir', install_ios_step1b:'en la barra de Safari',
+    install_ios_step2:'Desliza hacia abajo y selecciona', install_ios_step2b:'"Agregar a pantalla de inicio"',
+    install_ios_step3:'Toca', install_ios_step3b:'"Agregar" en la esquina superior derecha',
+    install_android_step1:'Toca el menú', install_android_step1b:'(tres puntos) arriba a la derecha de Chrome',
+    install_android_step2:'Selecciona', install_android_step2b:'"Instalar app" o "Agregar a pantalla de inicio"',
+    install_android_step3:'Confirma tocando', install_android_step3b:'"Instalar"',
+    got_it:'Entendido',
+    // Login screen
+    login_title:'Iniciar sesión', register_title:'Crear cuenta',
+    login_sub:'PULSE — tus rutinas, donde sea',
+    register_sub:'Regístrate para guardar tus rutinas en la nube',
+    email_label:'Correo electrónico', password_label:'Contraseña',
+    forgot_password:'¿Olvidaste tu contraseña?',
+    no_account:'¿No tienes cuenta?', register_link:'Regístrate',
+    have_account:'¿Ya tienes cuenta?', login_link:'Inicia sesión',
+    // Change password modal
+    change_password_title:'Cambiar contraseña',
+    change_password_desc:'Por seguridad, ingresa tu contraseña actual antes de cambiarla.',
+    current_password:'Contraseña actual', new_password:'Nueva contraseña',
+    new_password_placeholder:'Mínimo 6 caracteres', confirm_new_password:'Confirmar nueva contraseña',
+    update_password:'Actualizar contraseña',
+    // Export modal
+    export_title:'Exportar a Excel',
+    export_desc:'Descarga todos tus registros (ejercicios, sets, repeticiones y peso corporal) en un archivo .xlsx. Puedes usarlo como respaldo o para volver a cargar tus datos si tu sesión se borra.',
+    download_excel:'Descargar Excel',
+    // Reset data modal
+    reset_data_title:'⚠️ Resetear mis datos',
+    reset_data_will_delete:'Esto borrará permanentemente:',
+    reset_item1:'Todas las rutinas cargadas', reset_item2:'Todos los registros de ejercicios (kg, reps)',
+    reset_item3:'Todo tu historial de peso corporal',
+    reset_data_warning:'Tu cuenta seguirá existiendo, pero quedará completamente vacía, como nueva. <b>Esta acción no se puede deshacer.</b>',
+    // Language modal
+    language_title:'Idioma', language_desc:'Selecciona el idioma de la aplicación.',
+    // Notifications / alerts / errors
+    n_week_loaded:'Semana', n_loaded:'cargada', n_exercises:'ejercicios',
+    n_week_deleted:'eliminada', n_all_deleted:'Todas las semanas eliminadas',
+    n_app_reset:'App reseteada', n_data_reset:'Tus datos fueron reseteados',
+    n_record_updated:'Registro actualizado ✓', n_record_deleted:'Registro eliminado',
+    n_password_updated:'Contraseña actualizada correctamente',
+    n_excel_downloaded:'Excel descargado:', n_imported:'Importado:', n_records_word:'registros',
+    n_weights_word:'pesos', n_password_reset_sent:'Te enviamos un correo para restablecer tu contraseña',
+    n_installed:'Instalando PULSE...', n_already_installed:'Ya tienes la app instalada 🎉',
+    n_weight_saved:'Peso guardado:',
+    n_exercise_updated:'Ejercicio actualizado', new_exercise_default:'Nuevo ejercicio',
+    alert_enter_minutes:'Ingresa los minutos', alert_enter_kg_reps:'Ingresa kg y repeticiones en al menos un set',
+    alert_replace_name:'Escribe el nombre del ejercicio de reemplazo',
+    alert_enter_valid_values:'Ingresa valores válidos',
+    alert_enter_date_weight:'Ingresa fecha y peso',
+    alert_fill_all_fields:'Completa todos los campos.',
+    alert_password_min:'La nueva contraseña debe tener al menos 6 caracteres.',
+    alert_passwords_no_match:'Las contraseñas nuevas no coinciden.',
+    alert_complete_form:'Ingresa correo y contraseña.',
+    processing:'Procesando...', updating:'Actualizando...',
+    alert_enter_email_first:'Escribe tu correo arriba primero, luego toca "¿Olvidaste tu contraseña?"',
+    alert_week_invalid:'Ingresa un número de semana válido (1-52)',
+    alert_week_no_data:'No tenemos los datos del PDF de la Semana',
+    alert_week_available:'Semanas disponibles:',
+    alert_no_week_detected:'No se detectó semana en',
+    alert_enter_manually:'Ingresa el número de semana manualmente.',
+    alert_week_detected:'Semana',
+    alert_confirm_logout:'¿Cerrar sesión?',
+    alert_confirm_import:'Importar este Excel agregará los registros y el peso encontrados en el archivo a tus datos actuales (no borra lo que ya tienes). ¿Continuar?',
+    alert_import_failed:'No se pudo leer el archivo. Asegúrate de que sea un Excel exportado desde PULSE.',
+    alert_name_empty:'El nombre no puede estar vacío',
+    install_android_only:'La instalación automática solo está disponible en Chrome para Android. Abre este enlace desde tu teléfono Android en Chrome.',
+    connection_error:'No se pudo conectar con el servidor. Verifica tu conexión a internet y vuelve a intentar. Si el problema persiste, esta vista previa puede estar en un entorno restringido — abre el enlace real de tu app.',
+  },
+  en:{
+    nav_pdfs:'PDFs', nav_routine:'Routine', nav_history:'History', nav_weight:'My Weight',
+    header_synced:'Synced', header_saving:'Saving...', header_save_error:'Save error',
+    settings_change_password:'Change password', settings_export_excel:'Export to Excel',
+    settings_import_excel:'Import from Excel', settings_language:'Language',
+    settings_reset_data:'Reset my data', settings_logout:'Log out',
+    upload_title:'Upload training plan',
+    upload_desc:'Upload your trainer\'s PDF. The system reads exercise names directly from the file.',
+    upload_tap:'Tap to select PDF',
+    upload_example:'Plan_Week_1.pdf · Week_2.pdf · etc.',
+    upload_reading:'Reading PDF...', upload_extracting:'Extracting text...',
+    upload_processing:'Processing...', upload_analyzing:'Analyzing',upload_pages:'pages...',
+    upload_identifying:'Identifying exercises...', upload_assigning:'Assigning muscle groups...',
+    upload_no_exercises:'No exercises found in this PDF',
+    upload_check_pdf:'Make sure to upload your trainer\'s workout plan PDF.',
+    upload_processed:'PDF processed successfully',
+    upload_week:'Week', upload_days:'days', upload_exercises_found:'exercises found',
+    upload_error:'Error',
+    review_title:'Review exercises',
+    review_desc:'Check and edit exercises before confirming. Tap ✏️ to edit a name, or + to add one.',
+    review_cancel:'Cancel', review_confirm:'Confirm and load',
+    review_add:'+ Add',
+    loaded_routines:'Loaded routines',
+    confirm_delete_all_title:'Delete all weeks?',
+    confirm_delete_all_desc:'Exercise records are kept.',
+    yes_delete_all:'Yes, delete all', cancel:'Cancel',
+    general_stats:'General statistics',
+    stat_weeks:'Weeks', stat_exercises:'Exercises', stat_records:'Records', stat_prs:'PRs 🏆',
+    danger_zone:'Danger zone',
+    danger_zone_desc:'Delete all data including records and body weight.',
+    reset_all:'Reset everything',
+    confirm_reset_title:'⚠️ Are you sure?',
+    confirm_reset_desc:'<b>All</b> plans, records, and weight data will be deleted. This cannot be undone.',
+    yes_delete_everything:'Yes, delete everything',
+    week_loaded:'loaded', delete_week_confirm:'Delete Week',
+    delete_week_desc:'The plan is removed. Records are kept.',
+    yes_delete:'Yes, delete',
+    select_week:'Select week', week_placeholder:'— Week —',
+    sets_label:'set(s)', last_label:'Last', records_label:'rec.',
+    log_btn:'+ Log',
+    search_placeholder:'Search exercise...', all_filter:'All',
+    no_exercises_yet:'No exercises yet.', upload_pdf_first:'Upload a PDF first.',
+    no_records:'No records — use "+ Log" in Routine', no_data_label:'No data',
+    max_label:'Max', see_more:'See →', records_count:'rec.',
+    max_kg_per_session:'Max kg per session', no_records_use_log:'No records yet.<br>Use "+ Log" in Routine.',
+    weight_register_title:'Log weekly weight',
+    weight_field:'Weight', date_field:'Date', notes_field:'Notes', notes_placeholder:'Optional...',
+    save_weight:'Save weight', weight_evolution:'Body weight progress',
+    no_records_yet:'No records yet',
+    current_label:'Current', min_label:'Min', change_label:'Change',
+    register_today:'Log today', sets_count:'Number of sets',
+    history_previous:'Previous history', first_time:'First time doing this exercise 💪',
+    weight_kg_reps:'Weight (kg) · Reps', time_minutes:'⏱ Time in minutes', time_label:'Time',
+    save:'Save', edit_record:'Edit record', delete:'Delete', save_changes:'Save changes',
+    all_records:'All records', tap_to_see_progress:'Tap to see progress and edit',
+    replace_exercise:'Replace exercise', replace_question:'What exercise did you do instead?',
+    replace_name_placeholder:'Replacement exercise name',
+    replaced_label:'Replaced', replaced_by:'Replaced by',
+    edit_name:'Edit name', series_label:'Sets', reps_label:'Reps',
+    view_on_youtube:'Watch on YouTube',
+    install_for:'Download for',
+    install_ios_title:'Install on iPhone', install_android_title:'Install on Android',
+    install_ios_step1:'Tap the Share button', install_ios_step1b:'in the Safari toolbar',
+    install_ios_step2:'Scroll down and select', install_ios_step2b:'"Add to Home Screen"',
+    install_ios_step3:'Tap', install_ios_step3b:'"Add" in the top right corner',
+    install_android_step1:'Tap the menu', install_android_step1b:'(three dots) at the top right of Chrome',
+    install_android_step2:'Select', install_android_step2b:'"Install app" or "Add to Home screen"',
+    install_android_step3:'Confirm by tapping', install_android_step3b:'"Install"',
+    got_it:'Got it',
+    login_title:'Log in', register_title:'Create account',
+    login_sub:'PULSE — your routines, anywhere',
+    register_sub:'Sign up to save your routines in the cloud',
+    email_label:'Email', password_label:'Password',
+    forgot_password:'Forgot your password?',
+    no_account:'Don\'t have an account?', register_link:'Sign up',
+    have_account:'Already have an account?', login_link:'Log in',
+    change_password_title:'Change password',
+    change_password_desc:'For security, enter your current password before changing it.',
+    current_password:'Current password', new_password:'New password',
+    new_password_placeholder:'At least 6 characters', confirm_new_password:'Confirm new password',
+    update_password:'Update password',
+    export_title:'Export to Excel',
+    export_desc:'Download all your records (exercises, sets, reps, and body weight) as an .xlsx file. Use it as a backup or to reload your data if your session is lost.',
+    download_excel:'Download Excel',
+    reset_data_title:'⚠️ Reset my data',
+    reset_data_will_delete:'This will permanently delete:',
+    reset_item1:'All loaded routines', reset_item2:'All exercise records (kg, reps)',
+    reset_item3:'Your entire body weight history',
+    reset_data_warning:'Your account will still exist, but it will be completely empty, like new. <b>This action cannot be undone.</b>',
+    language_title:'Language', language_desc:'Select the app language.',
+    n_week_loaded:'Week', n_loaded:'loaded', n_exercises:'exercises',
+    n_week_deleted:'deleted', n_all_deleted:'All weeks deleted',
+    n_app_reset:'App reset', n_data_reset:'Your data has been reset',
+    n_record_updated:'Record updated ✓', n_record_deleted:'Record deleted',
+    n_password_updated:'Password updated successfully',
+    n_excel_downloaded:'Excel downloaded:', n_imported:'Imported:', n_records_word:'records',
+    n_weights_word:'weights', n_password_reset_sent:'We sent you an email to reset your password',
+    n_installed:'Installing PULSE...', n_already_installed:'You already have the app installed 🎉',
+    n_weight_saved:'Weight saved:',
+    n_exercise_updated:'Exercise updated', new_exercise_default:'New exercise',
+    alert_enter_minutes:'Enter the minutes', alert_enter_kg_reps:'Enter kg and reps for at least one set',
+    alert_replace_name:'Write the name of the replacement exercise',
+    alert_enter_valid_values:'Enter valid values',
+    alert_enter_date_weight:'Enter date and weight',
+    alert_fill_all_fields:'Fill in all fields.',
+    alert_password_min:'The new password must be at least 6 characters.',
+    alert_passwords_no_match:'New passwords don\'t match.',
+    alert_complete_form:'Enter email and password.',
+    processing:'Processing...', updating:'Updating...',
+    alert_enter_email_first:'Type your email above first, then tap "Forgot your password?"',
+    alert_week_invalid:'Enter a valid week number (1-52)',
+    alert_week_no_data:'We don\'t have PDF data for Week',
+    alert_week_available:'Available weeks:',
+    alert_no_week_detected:'No week detected in',
+    alert_enter_manually:'Enter the week number manually.',
+    alert_week_detected:'Week',
+    alert_confirm_logout:'Log out?',
+    alert_confirm_import:'Importing this Excel file will add the records and weights found in it to your current data (it won\'t delete what you already have). Continue?',
+    alert_import_failed:'Could not read the file. Make sure it\'s an Excel file exported from PULSE.',
+    alert_name_empty:'The name cannot be empty',
+    install_android_only:'Automatic installation is only available in Chrome for Android. Open this link from your Android phone in Chrome.',
+    connection_error:'Could not connect to the server. Check your internet connection and try again. If the problem persists, this preview may be in a restricted environment — open your app\'s real link.',
+  }
+};
+
+// Use a localStorage cache for the language so the LOGIN screen (shown before
+// Firestore data is available) can render in the right language immediately.
+// Once logged in, Firestore's db.settings.language becomes the source of truth.
+let currentLang=(localStorage.getItem('pulse_lang')==='en')?'en':'es';
+
+function t(key){
+  return (I18N[currentLang]&&I18N[currentLang][key])||I18N.es[key]||key;
+}
+
+async function setLanguage(lang){
+  if(lang!==('es')&&lang!=='en')lang='es';
+  currentLang=lang;
+  try{localStorage.setItem('pulse_lang',lang);}catch(e){}
+  db.settings=db.settings||{};
+  db.settings.language=lang;
+  lsave();
+  applyStaticTranslations();
+  renderAll();
+  // Re-render whichever sub-view is currently visible so dynamic text updates too
+  const activePage=document.querySelector('.pg.active');
+  if(activePage&&activePage.id==='pg-workout'&&aplan)renderDay(aday);
+  updateLanguageModalUI();
+  closeM('mdLanguage');
+}
+
+// Apply translations to all STATIC HTML (text that doesn't depend on JS data)
+function applyStaticTranslations(){
+  document.querySelectorAll('[data-i18n]').forEach(el=>{
+    const key=el.getAttribute('data-i18n');
+    el.textContent=t(key);
+  });
+  document.querySelectorAll('[data-i18n-placeholder]').forEach(el=>{
+    const key=el.getAttribute('data-i18n-placeholder');
+    el.placeholder=t(key);
+  });
+  // Special case: text containing inline HTML (e.g. <b> tags) must use innerHTML
+  const resetWarning=document.getElementById('resetWarningText');
+  if(resetWarning)resetWarning.innerHTML=t('reset_data_warning');
+  const confirmResetDesc=document.getElementById('confirmResetDescText');
+  if(confirmResetDesc)confirmResetDesc.innerHTML=t('confirm_reset_desc');
+  document.documentElement.lang=currentLang;
+}
+
 const BM={Pecho:'bp',Hombro:'bh','Tríceps':'bt',Pierna:'bpi',Abs:'ba',Espalda:'be','Bíceps':'bbi',Cardio:'bc',Calentamiento:'bca'};
+
 const KEY='gymdb_v9';
 let db={plans:{},logs:{},weights:[]};
 let aplan=null,aday=0,mEx=null,mWk=0,mSets=[],eKey=null,eEx=null,eSets=[],mFilter='',dChart=null;
@@ -444,15 +887,24 @@ function lsave(){
   if(indicator){indicator.innerHTML='<i class="ti ti-cloud-upload"></i> Guardando...';indicator.classList.add('syncing');}
   clearTimeout(saveDebounceTimer);
   saveDebounceTimer=setTimeout(async()=>{
-    try{
-      const ref=window.fbDoc(window.fbDb,'users',currentUser.uid);
-      await window.fbSetDoc(ref,{data:JSON.stringify(db),updatedAt:Date.now()});
-      if(indicator){indicator.innerHTML='<i class="ti ti-cloud-check"></i> Sincronizado';indicator.classList.remove('syncing');}
-    }catch(e){
-      console.error('Error guardando en Firestore:',e);
-      if(indicator){indicator.innerHTML='<i class="ti ti-cloud-x"></i> Error al guardar';indicator.classList.remove('syncing');}
-    }
+    await lsaveNow();
   },500);
+}
+
+// Immediate, non-debounced save — used after critical operations (reset, import)
+// where we need to guarantee the write completes before continuing.
+async function lsaveNow(){
+  if(!currentUser)return;
+  const indicator=document.getElementById('syncIndicator');
+  if(indicator){indicator.innerHTML='<i class="ti ti-cloud-upload"></i> Guardando...';indicator.classList.add('syncing');}
+  try{
+    const ref=window.fbDoc(window.fbDb,'users',currentUser.uid);
+    await window.fbSetDoc(ref,{data:JSON.stringify(db),updatedAt:Date.now()});
+    if(indicator){indicator.innerHTML='<i class="ti ti-cloud-check"></i> Sincronizado';indicator.classList.remove('syncing');}
+  }catch(e){
+    console.error('Error guardando en Firestore:',e);
+    if(indicator){indicator.innerHTML='<i class="ti ti-cloud-x"></i> Error al guardar';indicator.classList.remove('syncing');}
+  }
 }
 
 async function lload(){
@@ -470,7 +922,12 @@ async function lload(){
 
 async function init(){
   await lload();
-  if(!db.plans)db.plans={};if(!db.logs)db.logs={};if(!db.weights)db.weights=[];
+  if(!db.plans)db.plans={};if(!db.logs)db.logs={};if(!db.weights)db.weights=[];if(!db.settings)db.settings={};
+  // Apply the user's saved language preference (defaults to Spanish)
+  currentLang=(db.settings.language==='en')?'en':'es';
+  try{localStorage.setItem('pulse_lang',currentLang);}catch(e){}
+  applyStaticTranslations();
+  updateLanguageModalUI();
   document.getElementById('wDate').value=new Date().toISOString().split('T')[0];
   renderAll();
 }
@@ -495,11 +952,11 @@ async function handleUpload(inp){
   const file=inp.files[0];if(!file)return;
   inp.value='';
   document.getElementById('reviewCard').style.display='none';
-  setStatus('<span class="spinner"></span> Leyendo PDF...','Extrayendo texto...',20);
+  setStatus('<span class="spinner"></span> '+t('upload_reading'),t('upload_extracting'),20);
   try{
     const arrayBuffer=await file.arrayBuffer();
     const pdf=await pdfjsLib.getDocument({data:arrayBuffer}).promise;
-    setStatus('<span class="spinner"></span> Procesando...','Analizando '+pdf.numPages+' páginas...',40);
+    setStatus('<span class="spinner"></span> '+t('upload_processing'),t('upload_analyzing')+' '+pdf.numPages+' '+t('upload_pages'),40);
     const weekNum=detectWeekFromName(file.name)||1;
 
     // Extract text boxes with positions from all pages
@@ -539,11 +996,11 @@ async function handleUpload(inp){
       pages.push({pageNum:i,pageH,items,links});
     }
 
-    setStatus('<span class="spinner"></span> Identificando ejercicios...','Asignando grupos musculares...',70);
+    setStatus('<span class="spinner"></span> '+t('upload_identifying'),t('upload_assigning'),70);
     const plan=parsePlan(pages,weekNum,file.name);
 
     if(!plan||plan.days.length===0){
-      setStatus('❌ No se encontraron ejercicios en este PDF','Asegúrate de subir el PDF del plan de entrenamiento de tu entrenador.',0);
+      setStatus('❌ '+t('upload_no_exercises'),t('upload_check_pdf'),0);
       return;
     }
 
@@ -556,11 +1013,11 @@ async function handleUpload(inp){
     }
 
     const total=plan.days.reduce((a,d)=>a+d.sections.reduce((b,s)=>b+s.exercises.length,0),0);
-    setStatus('✅ PDF procesado correctamente',`Semana ${weekNum} · ${plan.days.length} días · ${total} ejercicios encontrados`,100);
+    setStatus('✅ '+t('upload_processed'),`${t('upload_week')} ${weekNum} · ${plan.days.length} ${t('upload_days')} · ${total} ${t('upload_exercises_found')}`,100);
     pendingPlan=plan;
     showReview(plan);
   }catch(e){
-    setStatus('❌ Error: '+e.message,'',0);
+    setStatus('❌ '+t('upload_error')+': '+e.message,'',0);
     console.error(e);
   }
 }
@@ -799,7 +1256,7 @@ function buildDayName(sections) {
 
 // ─── REVIEW WITH EDIT ─────────────────────────────────────────────────────────
 function showReview(plan) {
-  document.getElementById('reviewTitle').textContent = `Semana ${plan.week} — Revisar ejercicios`;
+  document.getElementById('reviewTitle').textContent = `${t('upload_week')} ${plan.week} — ${t('review_title')}`;
   renderReviewContent(plan);
   document.getElementById('reviewCard').style.display = 'block';
   document.getElementById('reviewCard').scrollIntoView({behavior:'smooth'});
@@ -814,7 +1271,7 @@ function renderReviewContent(plan) {
       html += `<div class="rev-sec">
         <div class="rev-sec-title">
           <span>${sec.title}</span>
-          <button class="edit-btn" onclick="addExercise(${di},${si})">+ Añadir</button>
+          <button class="edit-btn" onclick="addExercise(${di},${si})">${t('review_add')}</button>
         </div>`;
       sec.exercises.forEach((ex, ei) => {
         const bc = BM[ex.muscle] || 'bca';
@@ -826,17 +1283,17 @@ function renderReviewContent(plan) {
           <button class="edit-btn" onclick="deleteExercise(${di},${si},${ei})" style="color:var(--red)">🗑</button>
         </div>
         <div class="inline-edit" id="edit-${di}-${si}-${ei}" style="display:none">
-          <div class="mu" style="font-size:12px;margin-bottom:6px">Editar nombre</div>
+          <div class="mu" style="font-size:12px;margin-bottom:6px">${t('edit_name')}</div>
           <input type="text" id="ename-${di}-${si}-${ei}" value="${ex.name}" style="margin-bottom:6px">
           <div class="g2" style="gap:6px;margin-bottom:6px">
-            <div><div class="mu" style="font-size:12px;margin-bottom:3px">Series</div>
+            <div><div class="mu" style="font-size:12px;margin-bottom:3px">${t('series_label')}</div>
               <input type="number" id="esets-${di}-${si}-${ei}" value="${ex.sets}" min="1" max="10"></div>
-            <div><div class="mu" style="font-size:12px;margin-bottom:3px">Reps</div>
+            <div><div class="mu" style="font-size:12px;margin-bottom:3px">${t('reps_label')}</div>
               <input type="text" id="ereps-${di}-${si}-${ei}" value="${ex.reps}"></div>
           </div>
           <div class="inline-edit-btns">
-            <button class="btn btnsm btnp" onclick="saveExerciseEdit(${di},${si},${ei})">Guardar</button>
-            <button class="btn btnsm" onclick="cancelExerciseEdit(${di},${si},${ei})">Cancelar</button>
+            <button class="btn btnsm btnp" onclick="saveExerciseEdit(${di},${si},${ei})">${t('save')}</button>
+            <button class="btn btnsm" onclick="cancelExerciseEdit(${di},${si},${ei})">${t('cancel')}</button>
           </div>
         </div>`;
       });
@@ -862,12 +1319,12 @@ function saveExerciseEdit(di, si, ei) {
   const name = document.getElementById(`ename-${di}-${si}-${ei}`).value.trim();
   const sets = parseInt(document.getElementById(`esets-${di}-${si}-${ei}`).value) || 3;
   const reps = document.getElementById(`ereps-${di}-${si}-${ei}`).value.trim();
-  if (!name) { alert('El nombre no puede estar vacío'); return; }
+  if (!name) { alert(t('alert_name_empty')); return; }
   pendingPlan.days[di].sections[si].exercises[ei].name = name;
   pendingPlan.days[di].sections[si].exercises[ei].sets = sets;
   pendingPlan.days[di].sections[si].exercises[ei].reps = reps;
   renderReviewContent(pendingPlan);
-  notif('✓ Ejercicio actualizado');
+  notif('✓ '+t('n_exercise_updated'));
 }
 
 function deleteExercise(di, si, ei) {
@@ -879,7 +1336,7 @@ function addExercise(di, si) {
   const sec = pendingPlan.days[di].sections[si];
   const isCardio = sec.type === 'cardio';
   const newEx = {
-    name: 'Nuevo ejercicio',
+    name: t('new_exercise_default'),
     muscle: sec.exercises[0]?.muscle || 'Pecho',
     sets: isCardio ? 1 : 3,
     reps: isCardio ? '15 min' : '10-12',
@@ -898,7 +1355,7 @@ function confirmReview() {
   lsave(); renderAll();
   document.getElementById('reviewCard').style.display = 'none';
   const total = pendingPlan.days.reduce((a,d)=>a+d.sections.reduce((b,s)=>b+s.exercises.length,0),0);
-  notif(`✅ Semana ${pendingPlan.week} cargada — ${total} ejercicios`);
+  notif(`✅ ${t('upload_week')} ${pendingPlan.week} ${t('n_loaded')} — ${total} ${t('n_exercises')}`);
   pendingPlan = null;
 }
 function cancelReview() { document.getElementById('reviewCard').style.display='none'; pendingPlan=null; }
@@ -911,18 +1368,18 @@ function renderLoaded(){
   document.getElementById('cLoaded').style.display=weeks.length?'block':'none';
   document.getElementById('cStats').style.display=weeks.length?'block':'none';
   document.getElementById('loadedList').innerHTML=weeks.map(p=>`
-    <div class="wrow"><div style="flex:1"><div class="exn">Semana ${p.week}</div><div class="exs">${p.days.length} días · ${countEx(p)} ejercicios</div></div>
+    <div class="wrow"><div style="flex:1"><div class="exn">${t('upload_week')} ${p.week}</div><div class="exs">${p.days.length} ${t('upload_days')} · ${countEx(p)} ${t('stat_exercises').toLowerCase()}</div></div>
     <span class="bdg bok" style="margin-right:10px">✓</span>
     <button class="btn btnsm btnd" onclick="toggleC('dw${p.week}')"><i class="ti ti-trash"></i></button></div>
     <div id="dw${p.week}" style="display:none" class="cbox">
-      <div style="font-size:14px;font-weight:600;margin-bottom:6px">¿Borrar Semana ${p.week}?</div>
-      <div class="mu" style="margin-bottom:10px;font-size:13px">El plan se elimina. Los registros se conservan.</div>
-      <div class="flex-row"><button class="btn btnsm btnd" onclick="deleteWeek(${p.week})">Sí, borrar</button><button class="btn btnsm" onclick="toggleC('dw${p.week}')">Cancelar</button></div>
+      <div style="font-size:14px;font-weight:600;margin-bottom:6px">${t('delete_week_confirm')} ${p.week}?</div>
+      <div class="mu" style="margin-bottom:10px;font-size:13px">${t('delete_week_desc')}</div>
+      <div class="flex-row"><button class="btn btnsm btnd" onclick="deleteWeek(${p.week})">${t('yes_delete')}</button><button class="btn btnsm" onclick="toggleC('dw${p.week}')">${t('cancel')}</button></div>
     </div>`).join('');
 }
-function deleteWeek(wk){delete db.plans[wk];lsave();renderAll();fillSel();document.getElementById('wkEx').innerHTML='';document.getElementById('dayTabs').innerHTML='';notif('Semana '+wk+' eliminada');}
-function deleteAllWeeks(){db.plans={};lsave();renderAll();fillSel();document.getElementById('wkEx').innerHTML='';document.getElementById('dayTabs').innerHTML='';document.getElementById('delAll').style.display='none';notif('Todas las semanas eliminadas');}
-function doReset(){db={plans:{},logs:{},weights:[]};lsave();renderAll();fillSel();document.getElementById('wkEx').innerHTML='';document.getElementById('dayTabs').innerHTML='';document.getElementById('resetAll').style.display='none';notif('App reseteada');}
+function deleteWeek(wk){delete db.plans[wk];lsave();renderAll();fillSel();document.getElementById('wkEx').innerHTML='';document.getElementById('dayTabs').innerHTML='';notif(`${t('upload_week')} ${wk} ${t('n_week_deleted')}`);}
+function deleteAllWeeks(){db.plans={};lsave();renderAll();fillSel();document.getElementById('wkEx').innerHTML='';document.getElementById('dayTabs').innerHTML='';document.getElementById('delAll').style.display='none';notif(t('n_all_deleted'));}
+function doReset(){db={plans:{},logs:{},weights:[]};lsave();renderAll();fillSel();document.getElementById('wkEx').innerHTML='';document.getElementById('dayTabs').innerHTML='';document.getElementById('resetAll').style.display='none';notif(t('n_app_reset'));}
 function refreshStats(){
   const weeks=Object.values(db.plans).filter(p=>p&&p.loaded).length;
   const names=new Set();Object.values(db.plans).filter(p=>p&&p.loaded).forEach(p=>p.days.forEach(d=>d.sections.forEach(s=>s.exercises.forEach(e=>names.add(e.name)))));
@@ -931,8 +1388,8 @@ function refreshStats(){
   document.getElementById('stW').textContent=weeks;document.getElementById('stE').textContent=names.size;document.getElementById('stL').textContent=logs;document.getElementById('stP').textContent=prs;
 }
 function fillSel(){
-  const sel=document.getElementById('wkSel'),cur=sel.value;sel.innerHTML='<option value="">— Semana —</option>';
-  Object.values(db.plans).filter(p=>p&&p.loaded).sort((a,b)=>a.week-b.week).forEach(p=>sel.innerHTML+=`<option value="${p.week}">Semana ${p.week}</option>`);
+  const sel=document.getElementById('wkSel'),cur=sel.value;sel.innerHTML=`<option value="">${t('week_placeholder')}</option>`;
+  Object.values(db.plans).filter(p=>p&&p.loaded).sort((a,b)=>a.week-b.week).forEach(p=>sel.innerHTML+=`<option value="${p.week}">${t('upload_week')} ${p.week}</option>`);
   if(cur)sel.value=cur;
 }
 
@@ -948,16 +1405,16 @@ function renderDay(i){
       const logs=getLogs(ex.name),last=logs.length?logs[logs.length-1]:null;const bc=BM[ex.muscle]||'bca';
       let hist='';
       if(last&&last.sets&&last.sets.length){const disp=ex.isCardio?last.sets[0].val+' min':last.sets.map(s=>`${s.val}kg×${s.reps}`).join(' | ');const allMx=logs.map(l=>Math.max(0,...(l.sets||[]).map(s=>parseFloat(s.val)||0)));const isPR=allMx.length>1&&allMx[allMx.length-1]>=Math.max(...allMx.slice(0,-1));
-        hist=`<div style="margin-top:5px;display:flex;align-items:center;flex-wrap:wrap;gap:5px"><span style="font-size:12px;color:var(--text2)">Última S${last.week}: ${disp}</span>${isPR?'<span class="pr">🏆 PR</span>':''}${logs.length>1?`<span style="font-size:11px;color:var(--text2)">${logs.length} reg.</span>`:''}</div>`;}
-      const replaceTag=ex.replacedWith?`<span class="replaced-tag">↔ Reemplazado: ${ex.replacedWith}</span>`:'';
-      const regBtn=sec.type!=='warmup'?`<button class="btn btnsm btnp" style="white-space:nowrap;flex-shrink:0" onclick='openLogM(${JSON.stringify(ex)},${aplan.week})'>+ Log</button>`:'';
+        hist=`<div style="margin-top:5px;display:flex;align-items:center;flex-wrap:wrap;gap:5px"><span style="font-size:12px;color:var(--text2)">${t('last_label')} S${last.week}: ${disp}</span>${isPR?'<span class="pr">🏆 PR</span>':''}${logs.length>1?`<span style="font-size:11px;color:var(--text2)">${logs.length} ${t('records_label')}</span>`:''}</div>`;}
+      const replaceTag=ex.replacedWith?`<span class="replaced-tag">↔ ${t('replaced_label')}: ${ex.replacedWith}</span>`:'';
+      const regBtn=sec.type!=='warmup'?`<button class="btn btnsm btnp" style="white-space:nowrap;flex-shrink:0" onclick='openLogM(${JSON.stringify(ex)},${aplan.week})'>${t('log_btn')}</button>`:'';
       const vidKey=`v-${i}-${si}-${ei}`;
       const videoToggle=ex.videoId?`<button class="video-toggle-btn" onclick="toggleVideo('${vidKey}')" id="btn-${vidKey}" aria-label="Ver video del ejercicio"><i class="ti ti-chevron-down"></i></button>`:'';
       h+=`<div class="exrow"><div style="flex:1">
         <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
           <span class="exn">${ex.name}</span><span class="bdg ${bc}">${ex.muscle}</span>${replaceTag}${videoToggle}
         </div>
-        <div class="exs">${ex.sets} serie(s) · ${ex.reps}</div>${hist}
+        <div class="exs">${ex.sets} ${t('sets_label')} · ${ex.reps}</div>${hist}
         ${ex.videoId?`<div class="video-drop" id="${vidKey}" style="display:none">${buildVideoEmbed(ex.videoId,vidKey)}</div>`:''}
       </div>${regBtn}</div>`;
     });
@@ -974,7 +1431,7 @@ function buildVideoEmbed(videoId,key){
       <div class="yt-play-overlay"><i class="ti ti-player-play-filled"></i></div>
     </div>
     <a class="yt-open-link" href="https://www.youtube.com/watch?v=${videoId}" target="_blank" rel="noopener">
-      <i class="ti ti-brand-youtube"></i> Ver en YouTube
+      <i class="ti ti-brand-youtube"></i> ${t('view_on_youtube')}
     </a>`;
 }
 
@@ -1007,10 +1464,10 @@ function openLogM(ex,wk){
   document.getElementById('mlReplaceName').value='';
   document.getElementById('mlReplaceInputWrap').style.display='none';
   const logs=getLogs(ex.name);
-  let h=logs.length?'<div style="font-size:14px;font-weight:600;margin-bottom:6px">Historial previo</div>'+logs.slice(-4).map(l=>{const d=ex.isCardio?(l.sets||[]).map(s=>s.val+' min').join(', '):(l.sets||[]).map(s=>`${s.val}kg×${s.reps}`).join(' | ');const rep=l.replacedWith?`<span class="replaced-tag">↔ ${l.replacedWith}</span>`:'';return `<div class="hrow"><span class="wchip">S${l.week}</span><span style="flex:1">${d} ${rep}</span><span class="mu" style="font-size:12px">${l.date||''}</span></div>`;}).join('')+'<div style="height:10px"></div>'
-    :'<div class="mu" style="margin-bottom:12px">Primera vez que realizas este ejercicio 💪</div>';
+  let h=logs.length?`<div style="font-size:14px;font-weight:600;margin-bottom:6px">${t('history_previous')}</div>`+logs.slice(-4).map(l=>{const d=ex.isCardio?(l.sets||[]).map(s=>s.val+' min').join(', '):(l.sets||[]).map(s=>`${s.val}kg×${s.reps}`).join(' | ');const rep=l.replacedWith?`<span class="replaced-tag">↔ ${l.replacedWith}</span>`:'';return `<div class="hrow"><span class="wchip">S${l.week}</span><span style="flex:1">${d} ${rep}</span><span class="mu" style="font-size:12px">${l.date||''}</span></div>`;}).join('')+'<div style="height:10px"></div>'
+    :`<div class="mu" style="margin-bottom:12px">${t('first_time')}</div>`;
   document.getElementById('mlHist').innerHTML=h;
-  document.getElementById('mlHint').innerHTML=`<span class="mu" style="font-size:13px">${ex.isCardio?'⏱ Tiempo en minutos':'Peso (kg) · Repeticiones'}</span>`;
+  document.getElementById('mlHint').innerHTML=`<span class="mu" style="font-size:13px">${ex.isCardio?t('time_minutes'):t('weight_kg_reps')}</span>`;
   if(ex.isCardio){
     mSets=[{val:'',reps:''}];
     document.getElementById('mlSetCountWrap').style.display='none';
@@ -1046,14 +1503,14 @@ function toggleReplaceInput(){
   document.getElementById('mlReplaceInputWrap').style.display=checked?'block':'none';
   if(checked)document.getElementById('mlReplaceName').focus();
 }
-function renderLogSets(){document.getElementById('mlSets').innerHTML=mEx.isCardio?`<div class="srow"><span class="slbl">Tiempo</span><input type="number" inputmode="decimal" placeholder="min" value="${mSets[0].val}" min="1" step="1" oninput="mSets[0].val=this.value"><span class="mu">min</span></div>`:mSets.map((s,i)=>`<div class="srow"><span class="slbl">Set ${i+1}</span><input type="number" inputmode="decimal" placeholder="kg" value="${s.val}" min="0" step="0.5" oninput="mSets[${i}].val=this.value" style="max-width:90px"><input type="number" inputmode="decimal" placeholder="reps" value="${s.reps}" min="1" step="1" oninput="mSets[${i}].reps=this.value" style="max-width:80px"></div>`).join('');}
+function renderLogSets(){document.getElementById('mlSets').innerHTML=mEx.isCardio?`<div class="srow"><span class="slbl">${t('time_label')}</span><input type="number" inputmode="decimal" placeholder="min" value="${mSets[0].val}" min="1" step="1" oninput="mSets[0].val=this.value"><span class="mu">min</span></div>`:mSets.map((s,i)=>`<div class="srow"><span class="slbl">Set ${i+1}</span><input type="number" inputmode="decimal" placeholder="kg" value="${s.val}" min="0" step="0.5" oninput="mSets[${i}].val=this.value" style="max-width:90px"><input type="number" inputmode="decimal" placeholder="reps" value="${s.reps}" min="1" step="1" oninput="mSets[${i}].reps=this.value" style="max-width:80px"></div>`).join('');}
 function saveLog(){
   let filled=mEx.isCardio?[{val:mSets[0].val,reps:''}]:mSets.filter(s=>s.val&&s.reps);
-  if(!filled[0]||!filled[0].val){alert(mEx.isCardio?'Ingresa los minutos':'Ingresa kg y repeticiones en al menos un set');return;}
+  if(!filled[0]||!filled[0].val){alert(mEx.isCardio?t('alert_enter_minutes'):t('alert_enter_kg_reps'));return;}
 
   const isReplaced=document.getElementById('mlReplaceCheck').checked;
   const replaceName=document.getElementById('mlReplaceName').value.trim();
-  if(isReplaced&&!replaceName){alert('Escribe el nombre del ejercicio de reemplazo');return;}
+  if(isReplaced&&!replaceName){alert(t('alert_replace_name'));return;}
 
   const key=mEx.name+'_w'+mWk+'_'+Date.now();
   db.logs[key]={
@@ -1078,55 +1535,76 @@ function saveLog(){
 
   lsave();refreshStats();renderDay(aday);closeM('mdLog');
   const disp=mEx.isCardio?filled[0].val+' min':filled.map(s=>`${s.val}kg×${s.reps}`).join(', ');
-  notif(isReplaced?`✓ Reemplazado por "${replaceName}": ${disp}`:'✓ '+disp);
+  notif(isReplaced?`✓ ${t('replaced_by')} "${replaceName}": ${disp}`:'✓ '+disp);
 }
 
 // ─── EDIT MODAL ───────────────────────────────────────────────────────────────
 function openEditM(key){eKey=key;eEx=db.logs[key];if(!eEx)return;eSets=JSON.parse(JSON.stringify(eEx.sets||[]));document.getElementById('meName').textContent=eEx.exercise+' — S'+eEx.week+' '+(eEx.date||'');document.getElementById('meBadge').innerHTML=`<span class="bdg ${BM[eEx.muscle]||'bca'}">${eEx.muscle}</span>`;renderEditSets();document.getElementById('mdEdit').style.display='flex';}
-function renderEditSets(){document.getElementById('meSets').innerHTML=eEx.isCardio?`<div class="srow"><span class="slbl">Tiempo</span><input type="number" inputmode="decimal" value="${eSets[0]?.val||''}" min="1" step="1" oninput="eSets[0].val=this.value"><span class="mu">min</span></div>`:eSets.map((s,i)=>`<div class="srow"><span class="slbl">Set ${i+1}</span><input type="number" inputmode="decimal" placeholder="kg" value="${s.val}" min="0" step="0.5" oninput="eSets[${i}].val=this.value" style="max-width:90px"><input type="number" inputmode="decimal" placeholder="reps" value="${s.reps}" min="1" step="1" oninput="eSets[${i}].reps=this.value" style="max-width:80px">${eSets.length>1?`<button class="btn btnsm" onclick="rmES(${i})">×</button>`:''}</div>`).join('');}
+function renderEditSets(){document.getElementById('meSets').innerHTML=eEx.isCardio?`<div class="srow"><span class="slbl">${t('time_label')}</span><input type="number" inputmode="decimal" value="${eSets[0]?.val||''}" min="1" step="1" oninput="eSets[0].val=this.value"><span class="mu">min</span></div>`:eSets.map((s,i)=>`<div class="srow"><span class="slbl">Set ${i+1}</span><input type="number" inputmode="decimal" placeholder="kg" value="${s.val}" min="0" step="0.5" oninput="eSets[${i}].val=this.value" style="max-width:90px"><input type="number" inputmode="decimal" placeholder="reps" value="${s.reps}" min="1" step="1" oninput="eSets[${i}].reps=this.value" style="max-width:80px">${eSets.length>1?`<button class="btn btnsm" onclick="rmES(${i})">×</button>`:''}</div>`).join('');}
 function rmES(i){if(eSets.length>1){eSets.splice(i,1);renderEditSets();}}
-function updateLog(){if(!eKey)return;const filled=eEx.isCardio?eSets.filter(s=>s.val):eSets.filter(s=>s.val&&s.reps);if(!filled.length){alert('Ingresa valores válidos');return;}db.logs[eKey].sets=filled;lsave();refreshStats();renderHistory();renderDay(aday);closeM('mdEdit');notif('Registro actualizado ✓');}
-function deleteLog(){if(!eKey)return;delete db.logs[eKey];lsave();refreshStats();renderHistory();renderDay(aday);closeM('mdEdit');notif('Registro eliminado');}
+function updateLog(){if(!eKey)return;const filled=eEx.isCardio?eSets.filter(s=>s.val):eSets.filter(s=>s.val&&s.reps);if(!filled.length){alert(t('alert_enter_valid_values'));return;}db.logs[eKey].sets=filled;lsave();refreshStats();renderHistory();renderDay(aday);closeM('mdEdit');notif(t('n_record_updated'));}
+function deleteLog(){if(!eKey)return;delete db.logs[eKey];lsave();refreshStats();renderHistory();renderDay(aday);closeM('mdEdit');notif(t('n_record_deleted'));}
 
 // ─── DETAIL MODAL ─────────────────────────────────────────────────────────────
 function openDetailM(name,muscle,isCardio){
   const logs=getLogs(name);document.getElementById('mdName').textContent=name;document.getElementById('mdBadge').innerHTML=`<span class="bdg ${BM[muscle]||'bca'}">${muscle}</span>`;
   if(dChart){dChart.destroy();dChart=null;}const wrap=document.getElementById('mdChartWrap');const gc=window.matchMedia('(prefers-color-scheme:dark)').matches?'rgba(255,255,255,.08)':'rgba(0,0,0,.08)';
-  if(logs.length>=2&&!isCardio){wrap.style.display='block';dChart=new Chart(document.getElementById('mdCanvas'),{type:'line',data:{labels:logs.map(l=>'S'+l.week),datasets:[{data:logs.map(l=>Math.max(0,...(l.sets||[]).map(s=>parseFloat(s.val)||0))),borderColor:'#1D9E75',backgroundColor:'rgba(29,158,117,.12)',tension:.35,pointRadius:5,pointBackgroundColor:'#1D9E75',fill:true,borderWidth:2}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{ticks:{font:{size:11}},grid:{color:gc}},x:{ticks:{font:{size:11}},grid:{display:false}}}}});document.getElementById('mdLogs').innerHTML='<div style="font-size:12px;color:var(--text2);margin-bottom:10px;display:flex;align-items:center;gap:6px"><span style="width:12px;height:3px;background:#1D9E75;display:inline-block;border-radius:2px"></span>Máx kg por sesión</div>'+buildLogList(logs,isCardio);}
+  if(logs.length>=2&&!isCardio){wrap.style.display='block';dChart=new Chart(document.getElementById('mdCanvas'),{type:'line',data:{labels:logs.map(l=>'S'+l.week),datasets:[{data:logs.map(l=>Math.max(0,...(l.sets||[]).map(s=>parseFloat(s.val)||0))),borderColor:'#1D9E75',backgroundColor:'rgba(29,158,117,.12)',tension:.35,pointRadius:5,pointBackgroundColor:'#1D9E75',fill:true,borderWidth:2}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{ticks:{font:{size:11}},grid:{color:gc}},x:{ticks:{font:{size:11}},grid:{display:false}}}}});document.getElementById('mdLogs').innerHTML=`<div style="font-size:12px;color:var(--text2);margin-bottom:10px;display:flex;align-items:center;gap:6px"><span style="width:12px;height:3px;background:#1D9E75;display:inline-block;border-radius:2px"></span>${t('max_kg_per_session')}</div>`+buildLogList(logs,isCardio);}
   else if(logs.length>=2&&isCardio){wrap.style.display='block';dChart=new Chart(document.getElementById('mdCanvas'),{type:'bar',data:{labels:logs.map(l=>'S'+l.week),datasets:[{data:logs.map(l=>parseFloat((l.sets||[{val:0}])[0].val)||0),backgroundColor:'rgba(29,158,117,.7)',borderRadius:6}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{ticks:{font:{size:11}},grid:{color:gc}},x:{ticks:{font:{size:11}},grid:{display:false}}}}});document.getElementById('mdLogs').innerHTML=buildLogList(logs,isCardio);}
-  else{wrap.style.display='none';document.getElementById('mdLogs').innerHTML=logs.length?buildLogList(logs,isCardio):'<div class="mu" style="text-align:center;padding:24px">Sin registros aún.<br>Usa "+ Log" en Rutina.</div>';}
+  else{wrap.style.display='none';document.getElementById('mdLogs').innerHTML=logs.length?buildLogList(logs,isCardio):`<div class="mu" style="text-align:center;padding:24px">${t('no_records_use_log')}</div>`;}
   document.getElementById('mdDetail').style.display='flex';
 }
-function buildLogList(logs,isCardio){const ak=Object.keys(db.logs);return '<div style="font-size:14px;font-weight:600;margin-bottom:8px">Todos los registros</div>'+logs.slice().reverse().map(l=>{const key=ak.find(k=>db.logs[k]===l)||'';const disp=isCardio?(l.sets||[]).map(s=>s.val+' min').join(', '):(l.sets||[]).map(s=>`${s.val}kg×${s.reps}`).join(' | ');return `<div class="hrow"><span class="wchip">S${l.week}</span><span style="flex:1;font-size:13px">${disp}</span><span class="mu" style="font-size:12px">${l.date||''}</span><button class="btn btnsm" onclick="openEditM('${key}')" style="margin-left:4px"><i class="ti ti-edit"></i></button></div>`;}).join('');}
+function buildLogList(logs,isCardio){const ak=Object.keys(db.logs);return `<div style="font-size:14px;font-weight:600;margin-bottom:8px">${t('all_records')}</div>`+logs.slice().reverse().map(l=>{const key=ak.find(k=>db.logs[k]===l)||'';const disp=isCardio?(l.sets||[]).map(s=>s.val+' min').join(', '):(l.sets||[]).map(s=>`${s.val}kg×${s.reps}`).join(' | ');return `<div class="hrow"><span class="wchip">S${l.week}</span><span style="flex:1;font-size:13px">${disp}</span><span class="mu" style="font-size:12px">${l.date||''}</span><button class="btn btnsm" onclick="openEditM('${key}')" style="margin-left:4px"><i class="ti ti-edit"></i></button></div>`;}).join('');}
 
 // ─── HISTORY ──────────────────────────────────────────────────────────────────
 function renderHistory(){
   const q=(document.getElementById('srch')||{value:''}).value.toLowerCase().trim();
   const muscles=new Set();Object.values(db.plans).filter(p=>p&&p.loaded).forEach(p=>p.days.forEach(d=>d.sections.forEach(s=>s.exercises.forEach(e=>{if(e.muscle!=='Calentamiento')muscles.add(e.muscle)}))));
-  const fEl=document.getElementById('mfBtns');if(fEl)fEl.innerHTML=`<button class="dtab ${mFilter===''?'active':''}" onclick="setMF('')">Todos</button>`+[...muscles].map(m=>`<button class="dtab ${mFilter===m?'active':''}" onclick="setMF('${m}')">${m}</button>`).join('');
+  const fEl=document.getElementById('mfBtns');if(fEl)fEl.innerHTML=`<button class="dtab ${mFilter===''?'active':''}" onclick="setMF('')">${t('all_filter')}</button>`+[...muscles].map(m=>`<button class="dtab ${mFilter===m?'active':''}" onclick="setMF('${m}')">${m}</button>`).join('');
   const exMap={};Object.values(db.plans).filter(p=>p&&p.loaded).forEach(p=>p.days.forEach(d=>d.sections.forEach(s=>s.exercises.forEach(e=>{if(e.muscle==='Calentamiento')return;if(!exMap[e.name])exMap[e.name]={name:e.name,muscle:e.muscle,isCardio:e.isCardio,weeks:[]};if(!exMap[e.name].weeks.includes(p.week))exMap[e.name].weeks.push(p.week);}))));
   const filtered=Object.values(exMap).filter(e=>(!q||e.name.toLowerCase().includes(q))&&(!mFilter||e.muscle===mFilter)).sort((a,b)=>a.name.localeCompare(b.name));
   const el=document.getElementById('histList');
-  if(!filtered.length){el.innerHTML='<div style="text-align:center;padding:32px;color:var(--text2)">Sin ejercicios aún.<br>Sube un PDF primero.</div>';return;}
+  if(!filtered.length){el.innerHTML=`<div style="text-align:center;padding:32px;color:var(--text2)">${t('no_exercises_yet')}<br>${t('upload_pdf_first')}</div>`;return;}
   el.innerHTML=filtered.map(e=>{
     const logs=getLogs(e.name);const bc=BM[e.muscle]||'bca';const last=logs.length?logs[logs.length-1]:null;let lastDisp='',progBadge='';
     if(last&&last.sets&&last.sets.length){if(e.isCardio){lastDisp=last.sets[0].val+' min';}else{const mx=logs.map(l=>Math.max(0,...(l.sets||[]).map(s=>parseFloat(s.val)||0)));lastDisp=Math.max(...mx)+'kg';if(mx.length>1&&mx[0]>0){const p=Math.round((mx[mx.length-1]-mx[0])/mx[0]*100);progBadge=`<span style="font-size:12px;color:${p>=0?'#0F6E56':'#993C1D'};font-weight:600">${p>=0?'▲':'▼'}${Math.abs(p)}%</span>`;}}}
     return `<div class="hlist-row" onclick="openDetailM('${e.name.replace(/'/g,"\\'")}','${e.muscle}',${e.isCardio})">
-      <div style="flex:1;min-width:0"><div class="hlist-name">${e.name}</div><div class="hlist-meta"><span class="bdg ${bc}">${e.muscle}</span>${e.weeks.map(w=>`<span class="wchip">S${w}</span>`).join('')}${logs.length?`<span style="font-size:11px;color:var(--text2)">${logs.length} reg.</span>`:''}</div></div>
-      <div class="hlist-right">${lastDisp?`<span style="font-size:14px;font-weight:700">${lastDisp}</span>`:`<span style="font-size:12px;color:var(--text2)">Sin datos</span>`}${progBadge}<span style="font-size:11px;color:var(--text2)">Ver →</span></div>
+      <div style="flex:1;min-width:0"><div class="hlist-name">${e.name}</div><div class="hlist-meta"><span class="bdg ${bc}">${e.muscle}</span>${e.weeks.map(w=>`<span class="wchip">S${w}</span>`).join('')}${logs.length?`<span style="font-size:11px;color:var(--text2)">${logs.length} ${t('records_count')}</span>`:''}</div></div>
+      <div class="hlist-right">${lastDisp?`<span style="font-size:14px;font-weight:700">${lastDisp}</span>`:`<span style="font-size:12px;color:var(--text2)">${t('no_data_label')}</span>`}${progBadge}<span style="font-size:11px;color:var(--text2)">${t('see_more')}</span></div>
     </div>`;
   }).join('');
 }
 function setMF(m){mFilter=m;renderHistory();}
 
 // ─── WEIGHT ───────────────────────────────────────────────────────────────────
-function saveWeight(){const val=parseFloat(document.getElementById('wKg').value),date=document.getElementById('wDate').value,notes=document.getElementById('wNotes').value;if(!val||!date){alert('Ingresa fecha y peso');return;}db.weights.push({val,date,notes});db.weights.sort((a,b)=>a.date.localeCompare(b.date));lsave();renderWChart();document.getElementById('wKg').value='';document.getElementById('wNotes').value='';notif('✓ Peso guardado: '+val+' kg');}
+let currentWeightUnit='kg';
+function setWeightUnit(unit){
+  if(unit===currentWeightUnit)return;
+  const input=document.getElementById('wKg');
+  const val=parseFloat(input.value);
+  // Convert the currently-typed value so the number stays meaningful when switching units
+  if(!isNaN(val)){
+    input.value=unit==='lb'?(val*2.20462).toFixed(1):(val/2.20462).toFixed(1);
+  }
+  currentWeightUnit=unit;
+  document.getElementById('unitKgBtn').classList.toggle('active',unit==='kg');
+  document.getElementById('unitLbBtn').classList.toggle('active',unit==='lb');
+  input.placeholder=unit==='kg'?'82.5':'182';
+}
+
+function saveWeight(){
+  const raw=parseFloat(document.getElementById('wKg').value),date=document.getElementById('wDate').value,notes=document.getElementById('wNotes').value;
+  if(!raw||!date){alert(t('alert_enter_date_weight'));return;}
+  // Always store in kg regardless of which unit was used for input
+  const val=currentWeightUnit==='lb'?Math.round((raw/2.20462)*10)/10:raw;
+  db.weights.push({val,date,notes});db.weights.sort((a,b)=>a.date.localeCompare(b.date));lsave();renderWChart();document.getElementById('wKg').value='';document.getElementById('wNotes').value='';notif('✓ '+t('n_weight_saved')+' '+val+' kg');
+}
 function renderWChart(){
-  if(!db.weights||!db.weights.length){document.getElementById('wChart').innerHTML='<div style="text-align:center;padding:24px;color:var(--text2)">Sin registros aún</div>';document.getElementById('wLog').innerHTML='';return;}
+  if(!db.weights||!db.weights.length){document.getElementById('wChart').innerHTML=`<div style="text-align:center;padding:24px;color:var(--text2)">${t('no_records_yet')}</div>`;document.getElementById('wLog').innerHTML='';return;}
   const ws=db.weights.slice(-8),mn=Math.min(...ws.map(w=>w.val)),mx=Math.max(...ws.map(w=>w.val)),rng=mx-mn||1;
   const bars=ws.map(w=>{const h=Math.max(8,Math.round(((w.val-mn)/rng)*60+8));return `<div style="display:flex;flex-direction:column;align-items:center;flex:1;gap:3px"><div style="font-size:10px;color:var(--text2)">${w.val}</div><div style="width:100%;background:#9FE1CB;border-radius:4px 4px 0 0;height:${h}px"></div><div style="font-size:10px;color:var(--text2)">${w.date.slice(5)}</div></div>`;}).join('');
   const f=db.weights[0].val,l=db.weights[db.weights.length-1].val,d=Math.round((l-f)*10)/10;
-  document.getElementById('wChart').innerHTML=`<div class="g3" style="margin-bottom:12px"><div class="met"><div class="mv">${l}kg</div><div class="mlb">Actual</div></div><div class="met"><div class="mv">${Math.min(...db.weights.map(w=>w.val))}kg</div><div class="mlb">Mínimo</div></div><div class="met"><div class="mv" style="color:${d>0?'#0F6E56':d<0?'#993C1D':'var(--text)'}">${d>0?'+':''}${d}kg</div><div class="mlb">Cambio</div></div></div><div style="display:flex;align-items:flex-end;gap:4px;height:72px">${bars}</div>`;
+  document.getElementById('wChart').innerHTML=`<div class="g3" style="margin-bottom:12px"><div class="met"><div class="mv">${l}kg</div><div class="mlb">${t('current_label')}</div></div><div class="met"><div class="mv">${Math.min(...db.weights.map(w=>w.val))}kg</div><div class="mlb">${t('min_label')}</div></div><div class="met"><div class="mv" style="color:${d>0?'#0F6E56':d<0?'#993C1D':'var(--text)'}">${d>0?'+':''}${d}kg</div><div class="mlb">${t('change_label')}</div></div></div><div style="display:flex;align-items:flex-end;gap:4px;height:72px">${bars}</div>`;
   document.getElementById('wLog').innerHTML=db.weights.slice().reverse().map(w=>`<div class="hrow"><span style="width:8px;height:8px;border-radius:50%;background:#1D9E75;display:inline-block;flex-shrink:0"></span><span style="flex:1;font-weight:600;font-size:14px">${w.val} kg</span><span class="mu" style="font-size:13px">${w.date}</span>${w.notes?`<span class="mu" style="font-size:12px;font-style:italic">${w.notes}</span>`:''}</div>`).join('');
 }
 
@@ -1155,11 +1633,11 @@ function waitForFirebase(){
 
 function toggleAuthMode(){
   isRegisterMode=!isRegisterMode;
-  document.getElementById('loginTitle').textContent=isRegisterMode?'Crear cuenta':'Iniciar sesión';
-  document.getElementById('loginSub').textContent=isRegisterMode?'Regístrate para guardar tus rutinas en la nube':'PULSE — tus rutinas, donde sea';
-  document.getElementById('loginSubmitBtn').textContent=isRegisterMode?'Crear cuenta':'Iniciar sesión';
-  document.getElementById('toggleText').textContent=isRegisterMode?'¿Ya tienes cuenta?':'¿No tienes cuenta?';
-  document.getElementById('toggleLink').textContent=isRegisterMode?'Inicia sesión':'Regístrate';
+  document.getElementById('loginTitle').textContent=isRegisterMode?t('register_title'):t('login_title');
+  document.getElementById('loginSub').textContent=isRegisterMode?t('register_sub'):t('login_sub');
+  document.getElementById('loginSubmitBtn').textContent=isRegisterMode?t('register_title'):t('login_title');
+  document.getElementById('toggleText').textContent=isRegisterMode?t('have_account'):t('no_account');
+  document.getElementById('toggleLink').textContent=isRegisterMode?t('login_link'):t('register_link');
   document.getElementById('forgotWrap').style.display=isRegisterMode?'none':'block';
   hideLoginError();
 }
@@ -1186,10 +1664,10 @@ async function handleAuthSubmit(){
   hideLoginError();
   const email=document.getElementById('loginEmail').value.trim();
   const password=document.getElementById('loginPassword').value;
-  if(!email||!password){showLoginError('Ingresa correo y contraseña.');return;}
+  if(!email||!password){showLoginError(t('alert_complete_form'));return;}
   const btn=document.getElementById('loginSubmitBtn');
   const originalText=btn.textContent;
-  btn.disabled=true;btn.innerHTML='<span class="spinner"></span> Procesando...';
+  btn.disabled=true;btn.innerHTML='<span class="spinner"></span> '+t('processing');
   try{
     if(isRegisterMode){await window.fbCreateUser(window.fbAuth,email,password);}
     else{await window.fbSignIn(window.fbAuth,email,password);}
@@ -1201,17 +1679,253 @@ async function handleAuthSubmit(){
 
 async function handleForgotPassword(){
   const email=document.getElementById('loginEmail').value.trim();
-  if(!email){showLoginError('Escribe tu correo arriba primero, luego toca "¿Olvidaste tu contraseña?"');return;}
+  if(!email){showLoginError(t('alert_enter_email_first'));return;}
   try{
     await window.fbSendPasswordReset(window.fbAuth,email);
     hideLoginError();
-    notif('✓ Te enviamos un correo para restablecer tu contraseña');
+    notif('✓ '+t('n_password_reset_sent'));
   }catch(e){showLoginError(translateAuthError(e.code));}
 }
 
 async function handleLogout(){
-  if(!confirm('¿Cerrar sesión?'))return;
+  if(!confirm(t('alert_confirm_logout')))return;
+  closeSettingsMenu();
   await window.fbSignOut(window.fbAuth);
+}
+
+// ─── SETTINGS MENU ──────────────────────────────────────────────────────────────
+function toggleSettingsMenu(){
+  const dd=document.getElementById('settingsDropdown');
+  const btn=document.getElementById('settingsBtn');
+  const isOpen=dd.style.display!=='none';
+  dd.style.display=isOpen?'none':'block';
+  btn.classList.toggle('active',!isOpen);
+}
+function closeSettingsMenu(){
+  document.getElementById('settingsDropdown').style.display='none';
+  document.getElementById('settingsBtn').classList.remove('active');
+}
+// Close the dropdown when tapping anywhere outside of it
+document.addEventListener('click',(e)=>{
+  const wrap=document.querySelector('.settings-menu-wrap');
+  if(wrap&&!wrap.contains(e.target)){
+    closeSettingsMenu();
+  }
+});
+
+// ─── CHANGE PASSWORD ──────────────────────────────────────────────────────────
+function openChangePasswordModal(){
+  closeSettingsMenu();
+  document.getElementById('pwCurrent').value='';
+  document.getElementById('pwNew').value='';
+  document.getElementById('pwConfirm').value='';
+  document.getElementById('pwError').style.display='none';
+  document.getElementById('mdPassword').style.display='flex';
+}
+
+async function handleChangePassword(){
+  const errEl=document.getElementById('pwError');
+  errEl.style.display='none';
+  const current=document.getElementById('pwCurrent').value;
+  const next=document.getElementById('pwNew').value;
+  const confirm2=document.getElementById('pwConfirm').value;
+
+  if(!current||!next||!confirm2){
+    errEl.textContent=t('alert_fill_all_fields');errEl.style.display='block';return;
+  }
+  if(next.length<6){
+    errEl.textContent=t('alert_password_min');errEl.style.display='block';return;
+  }
+  if(next!==confirm2){
+    errEl.textContent=t('alert_passwords_no_match');errEl.style.display='block';return;
+  }
+
+  const btn=document.getElementById('pwSubmitBtn');
+  const originalText=btn.textContent;
+  btn.disabled=true;btn.innerHTML='<span class="spinner"></span> '+t('updating');
+
+  try{
+    const credential=window.fbEmailAuthProvider.credential(currentUser.email,current);
+    await window.fbReauthenticate(currentUser,credential);
+    await window.fbUpdatePassword(currentUser,next);
+    closeM('mdPassword');
+    notif('✓ '+t('n_password_updated'));
+  }catch(e){
+    errEl.textContent=translateAuthError(e.code);
+    errEl.style.display='block';
+  }finally{
+    btn.disabled=false;btn.textContent=originalText;
+  }
+}
+
+// ─── LANGUAGE ──────────────────────────────────────────────────────────────────
+function openLanguageModal(){
+  closeSettingsMenu();
+  updateLanguageModalUI();
+  document.getElementById('mdLanguage').style.display='flex';
+}
+
+function updateLanguageModalUI(){
+  const esSelected=currentLang==='es';
+  const esOpt=document.getElementById('langOptionEs');
+  const enOpt=document.getElementById('langOptionEn');
+  if(esOpt)esOpt.classList.toggle('selected',esSelected);
+  if(enOpt)enOpt.classList.toggle('selected',!esSelected);
+  const suffix=document.getElementById('langSuffix');
+  if(suffix)suffix.textContent=esSelected?'Español':'English';
+}
+
+// ─── RESET DATA ────────────────────────────────────────────────────────────────
+function openResetDataModal(){
+  closeSettingsMenu();
+  document.getElementById('mdResetConfirm').style.display='flex';
+}
+
+async function confirmResetData(){
+  db={plans:{},logs:{},weights:[]};
+  await lsaveNow();
+  closeM('mdResetConfirm');
+  renderAll();
+  document.getElementById('wkEx').innerHTML='';
+  document.getElementById('dayTabs').innerHTML='';
+  notif('✓ '+t('n_data_reset'));
+}
+
+// ─── EXPORT TO EXCEL ────────────────────────────────────────────────────────────
+function openExportModal(){
+  closeSettingsMenu();
+  document.getElementById('mdExport').style.display='flex';
+}
+
+function exportToExcel(){
+  const wb=XLSX.utils.book_new();
+
+  // Sheet 1: Exercise logs (one row per set)
+  const logRows=[];
+  Object.values(db.logs).forEach(log=>{
+    (log.sets||[]).forEach((s,idx)=>{
+      logRows.push({
+        Fecha:log.date||'',
+        Semana:log.week||'',
+        Ejercicio:log.exercise||'',
+        Musculo:log.muscle||'',
+        Set:idx+1,
+        ...(log.isCardio?{Minutos:s.val||''}:{Kg:s.val||'',Repeticiones:s.reps||''}),
+        Reemplazado:log.replacedWith||''
+      });
+    });
+  });
+  const logSheet=XLSX.utils.json_to_sheet(logRows);
+  XLSX.utils.book_append_sheet(wb,logSheet,'Registros');
+
+  // Sheet 2: Body weight log
+  const weightRows=(db.weights||[]).map(w=>({
+    Fecha:w.date,
+    'Peso (kg)':w.val,
+    Notas:w.notes||''
+  }));
+  const weightSheet=XLSX.utils.json_to_sheet(weightRows);
+  XLSX.utils.book_append_sheet(wb,weightSheet,'Peso Corporal');
+
+  // Sheet 3: Loaded plans summary (for reference, not re-importable as routine structure)
+  const planRows=[];
+  Object.values(db.plans).forEach(p=>{
+    if(!p||!p.loaded)return;
+    p.days.forEach(d=>{
+      d.sections.forEach(s=>{
+        s.exercises.forEach(ex=>{
+          planRows.push({
+            Semana:p.week,
+            Dia:d.label,
+            Seccion:s.title,
+            Ejercicio:ex.name,
+            Musculo:ex.muscle,
+            Series:ex.sets,
+            Reps:ex.reps
+          });
+        });
+      });
+    });
+  });
+  const planSheet=XLSX.utils.json_to_sheet(planRows);
+  XLSX.utils.book_append_sheet(wb,planSheet,'Rutinas Cargadas');
+
+  const fname=`PULSE_backup_${new Date().toISOString().split('T')[0]}.xlsx`;
+  XLSX.writeFile(wb,fname);
+  closeM('mdExport');
+  notif('✓ '+t('n_excel_downloaded')+' '+fname);
+}
+
+// ─── IMPORT FROM EXCEL ──────────────────────────────────────────────────────────
+function triggerImportExcel(){
+  closeSettingsMenu();
+  document.getElementById('excelImportInput').click();
+}
+
+async function handleExcelImport(inp){
+  const file=inp.files[0];
+  if(!file)return;
+  inp.value='';
+
+  if(!confirm(t('alert_confirm_import'))){
+    return;
+  }
+
+  try{
+    const data=await file.arrayBuffer();
+    const wb=XLSX.read(data,{type:'array'});
+    let importedLogs=0,importedWeights=0;
+
+    // Import "Registros" sheet back into db.logs
+    if(wb.SheetNames.includes('Registros')){
+      const rows=XLSX.utils.sheet_to_json(wb.Sheets['Registros']);
+      // Group rows back into logs by Fecha+Semana+Ejercicio (since each row = one set)
+      const grouped={};
+      rows.forEach(r=>{
+        const key=`${r.Fecha}_${r.Semana}_${r.Ejercicio}`;
+        if(!grouped[key]){
+          grouped[key]={
+            exercise:r.Ejercicio,muscle:r.Musculo,week:Number(r.Semana)||0,
+            date:r.Fecha,isCardio:r.Minutos!==undefined&&r.Minutos!=='',
+            replacedWith:r.Reemplazado||null,sets:[]
+          };
+        }
+        if(grouped[key].isCardio){
+          grouped[key].sets.push({val:String(r.Minutos||''),reps:''});
+        }else{
+          grouped[key].sets.push({val:String(r.Kg||''),reps:String(r.Repeticiones||'')});
+        }
+      });
+      Object.values(grouped).forEach(log=>{
+        const key=`${log.exercise}_w${log.week}_${Date.now()}_${Math.random().toString(36).slice(2,7)}`;
+        db.logs[key]=log;
+        importedLogs++;
+      });
+    }
+
+    // Import "Peso Corporal" sheet back into db.weights
+    if(wb.SheetNames.includes('Peso Corporal')){
+      const rows=XLSX.utils.sheet_to_json(wb.Sheets['Peso Corporal']);
+      rows.forEach(r=>{
+        const val=parseFloat(r['Peso (kg)']);
+        if(!val||!r.Fecha)return;
+        // Avoid exact duplicates (same date + same value already present)
+        const exists=db.weights.some(w=>w.date===r.Fecha&&w.val===val);
+        if(!exists){
+          db.weights.push({val,date:r.Fecha,notes:r.Notas||''});
+          importedWeights++;
+        }
+      });
+      db.weights.sort((a,b)=>a.date.localeCompare(b.date));
+    }
+
+    await lsaveNow();
+    renderAll();
+    notif(`✓ ${t('n_imported')} ${importedLogs} ${t('n_records_word')}, ${importedWeights} ${t('n_weights_word')}`);
+  }catch(e){
+    console.error('Error importando Excel:',e);
+    alert(t('alert_import_failed'));
+  }
 }
 
 async function startApp(){
@@ -1220,7 +1934,7 @@ async function startApp(){
     // Firebase truly failed to load (blocked domain, no network, etc.)
     document.getElementById('loadingScreen').style.display='none';
     document.getElementById('loginScreen').style.display='flex';
-    showLoginError('No se pudo conectar con el servidor. Verifica tu conexión a internet y vuelve a intentar. Si el problema persiste, esta vista previa puede estar en un entorno restringido — abre el enlace real de tu app.');
+    showLoginError(t('connection_error'));
     return;
   }
   window.fbOnAuthStateChanged(window.fbAuth,async(user)=>{
@@ -1264,7 +1978,7 @@ function isStandalone(){return window.matchMedia('(display-mode: standalone)').m
 
 async function handleDownloadClick(platform){
   if(isStandalone()){
-    notif('Ya tienes la app instalada 🎉');
+    notif(t('n_already_installed'));
     return;
   }
   if(platform==='android'){
@@ -1274,14 +1988,14 @@ async function handleDownloadClick(platform){
       const result=await deferredInstallPrompt.userChoice;
       deferredInstallPrompt=null;
       if(result.outcome==='accepted'){
-        notif('✓ Instalando PULSE...');
+        notif('✓ '+t('n_installed'));
       }
     }else if(isAndroid()){
       // Chrome/Android but prompt not ready yet or already dismissed once this session
       showIOSInstallModal('android-fallback');
     }else{
       // Not on an Android device — installing isn't possible from here
-      alert('La instalación automática solo está disponible en Chrome para Android. Abre este enlace desde tu teléfono Android en Chrome.');
+      alert(t('install_android_only'));
     }
   }else if(platform==='ios'){
     showIOSInstallModal('ios');
@@ -1289,36 +2003,45 @@ async function handleDownloadClick(platform){
 }
 
 function showIOSInstallModal(variant){
-  document.getElementById('installModalTitle').textContent = variant==='ios' ? 'Instalar en iPhone' : 'Instalar en Android';
+  document.getElementById('installModalTitle').textContent = variant==='ios' ? t('install_ios_title') : t('install_android_title');
   document.getElementById('installModalSteps').innerHTML = variant==='ios' ? `
     <div class="install-step">
       <span class="install-step-num">1</span>
-      <span>Toca el botón de Compartir <i class="ti ti-square-arrow-up" style="vertical-align:middle"></i> en la barra de Safari</span>
+      <span>${t('install_ios_step1')} <i class="ti ti-square-arrow-up" style="vertical-align:middle"></i> ${t('install_ios_step1b')}</span>
     </div>
     <div class="install-step">
       <span class="install-step-num">2</span>
-      <span>Desliza hacia abajo y selecciona <b>"Agregar a pantalla de inicio"</b></span>
+      <span>${t('install_ios_step2')} <b>${t('install_ios_step2b')}</b></span>
     </div>
     <div class="install-step">
       <span class="install-step-num">3</span>
-      <span>Toca <b>"Agregar"</b> en la esquina superior derecha</span>
+      <span>${t('install_ios_step3')} <b>${t('install_ios_step3b')}</b></span>
     </div>
   ` : `
     <div class="install-step">
       <span class="install-step-num">1</span>
-      <span>Toca el menú <b>⋮</b> (tres puntos) arriba a la derecha de Chrome</span>
+      <span>${t('install_android_step1')} <b>⋮</b> ${t('install_android_step1b')}</span>
     </div>
     <div class="install-step">
       <span class="install-step-num">2</span>
-      <span>Selecciona <b>"Instalar app"</b> o <b>"Agregar a pantalla de inicio"</b></span>
+      <span>${t('install_android_step2')} <b>${t('install_android_step2b')}</b></span>
     </div>
     <div class="install-step">
       <span class="install-step-num">3</span>
-      <span>Confirma tocando <b>"Instalar"</b></span>
+      <span>${t('install_android_step3')} <b>${t('install_android_step3b')}</b></span>
     </div>
   `;
   document.getElementById('installModal').style.display='flex';
 }
+
+// Apply translations immediately on load (uses cached language) so the login
+// screen shows the right language even before Firebase/Firestore responds.
+applyStaticTranslations();
+document.getElementById('loginTitle').textContent=t('login_title');
+document.getElementById('loginSub').textContent=t('login_sub');
+document.getElementById('loginSubmitBtn').textContent=t('login_title');
+document.getElementById('toggleText').textContent=t('no_account');
+document.getElementById('toggleLink').textContent=t('register_link');
 
 startApp();
 </script>
