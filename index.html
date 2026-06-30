@@ -128,6 +128,24 @@ button{cursor:pointer;font-family:inherit}
 .set-count-btn{width:40px;height:40px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--bg2);color:var(--text);font-size:15px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center}
 .set-count-btn.active{background:var(--green);color:#fff;border-color:transparent}
 .replaced-tag{background:#FAEEDA;color:#633806;font-size:11px;padding:2px 7px;border-radius:6px;font-weight:600;display:inline-flex;align-items:center;gap:3px}
+/* Exercise video dropdown */
+.video-toggle-btn{background:var(--bg2);border:1px solid var(--border);color:var(--text2);width:24px;height:24px;border-radius:7px;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;font-size:14px;flex-shrink:0;transition:.18s}
+.video-toggle-btn:hover{background:var(--bg3);color:var(--text)}
+.video-toggle-btn i{transition:transform .2s ease}
+.video-toggle-btn.open i{transform:rotate(180deg)}
+.video-toggle-btn.open{color:var(--green);border-color:var(--green)}
+.video-drop{margin-top:10px;animation:videoDropIn .2s ease}
+@keyframes videoDropIn{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:translateY(0)}}
+.yt-preview{position:relative;width:100%;max-width:360px;border-radius:var(--radius-sm);overflow:hidden;cursor:pointer;background:#000;aspect-ratio:16/9}
+.yt-preview img{width:100%;height:100%;object-fit:cover;display:block}
+.yt-play-overlay{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.25);transition:.15s}
+.yt-play-overlay i{font-size:46px;color:#fff;filter:drop-shadow(0 2px 6px rgba(0,0,0,.5))}
+.yt-preview:hover .yt-play-overlay{background:rgba(0,0,0,.4)}
+.yt-iframe-wrap{position:relative;width:100%;max-width:360px;aspect-ratio:16/9;border-radius:var(--radius-sm);overflow:hidden;background:#000}
+.yt-iframe-wrap iframe{width:100%;height:100%;border:0;display:block}
+.yt-open-link{display:inline-flex;align-items:center;gap:6px;margin-top:8px;font-size:12px;color:var(--text2);text-decoration:none;font-weight:500}
+.yt-open-link:hover{color:var(--green)}
+.yt-open-link i{font-size:15px;color:#FF0000}
 /* LOGIN SCREEN */
 #loginScreen{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;padding:20px;background:var(--bg2);gap:20px}
 .login-box{width:100%;max-width:380px;background:var(--bg);border-radius:var(--radius);padding:32px 24px;box-shadow:var(--shadow)}
@@ -489,6 +507,7 @@ async function handleUpload(inp){
     for(let i=1;i<=pdf.numPages;i++){
       const page=await pdf.getPage(i);
       const content=await page.getTextContent();
+      const annotations=await page.getAnnotations();
       const viewport=page.getViewport({scale:1});
       const pageH=viewport.height;
       // Group items into text boxes by proximity
@@ -501,7 +520,23 @@ async function handleUpload(inp){
           y:Math.round(pageH-item.transform[5]),
           w:Math.round(item.width)
         }));
-      pages.push({pageNum:i,pageH,items});
+      // Extract link annotations (hyperlinks) with their position and target URL.
+      // PDF.js validates URLs and may reject unusual ones (like nested Google redirect
+      // links), leaving `.url` undefined and only populating `.unsafeUrl` instead —
+      // so we must check both.
+      const links=annotations
+        .filter(a=>a.subtype==='Link'&&(a.url||a.unsafeUrl))
+        .map(a=>{
+          const rect=a.rect; // [x0, y0, x1, y1] in PDF coords (bottom-up)
+          return{
+            url:a.url||a.unsafeUrl,
+            x0:Math.round(rect[0]),
+            x1:Math.round(rect[2]),
+            // Convert to top-down, use vertical midpoint of the link rect
+            y:Math.round(pageH-(rect[1]+rect[3])/2)
+          };
+        });
+      pages.push({pageNum:i,pageH,items,links});
     }
 
     setStatus('<span class="spinner"></span> Identificando ejercicios...','Asignando grupos musculares...',70);
@@ -510,6 +545,14 @@ async function handleUpload(inp){
     if(!plan||plan.days.length===0){
       setStatus('❌ No se encontraron ejercicios en este PDF','Asegúrate de subir el PDF del plan de entrenamiento de tu entrenador.',0);
       return;
+    }
+
+    // Diagnostic: log how many exercises got a matched video link
+    const allEx=plan.days.flatMap(d=>d.sections.flatMap(s=>s.exercises));
+    const withVideo=allEx.filter(e=>e.videoId).length;
+    console.log(`PULSE: ${withVideo}/${allEx.length} ejercicios con video de YouTube vinculado.`);
+    if(withVideo===0){
+      console.warn('Ningún ejercicio obtuvo video. Revisa si el PDF tiene hipervínculos reales en los nombres de ejercicios.');
     }
 
     const total=plan.days.reduce((a,d)=>a+d.sections.reduce((b,s)=>b+s.exercises.length,0),0);
@@ -550,7 +593,7 @@ function parsePlan(pages, weekNum, filename) {
     if (leftItems.length === 0) return;
 
     // Merge items that are close vertically (same exercise name split across lines)
-    const merged = mergeCloseItems(leftItems);
+    const merged = mergeCloseItems(leftItems, page.links);
 
     if (merged.length === 0) return;
 
@@ -573,7 +616,59 @@ function parsePlan(pages, weekNum, filename) {
   return { week: weekNum, loaded: true, days };
 }
 
-function mergeCloseItems(items) {
+// ─── YOUTUBE LINK EXTRACTION ───────────────────────────────────────────────────
+// PDF hyperlinks are often wrapped in Google redirect URLs (from Google Slides/Docs
+// export), e.g. https://www.google.com/url?q=https://www.youtube.com/watch%3Fv%3DXXXX
+// We need to unwrap these to get the real YouTube video ID.
+function extractYouTubeId(url){
+  if(!url)return null;
+  const patterns=[
+    /(?:youtube\.com\/watch\?v=|youtube\.com\/watch\?.*[&?]v=)([a-zA-Z0-9_-]{6,})/,
+    /youtu\.be\/([a-zA-Z0-9_-]{6,})/,
+    /youtube\.com\/embed\/([a-zA-Z0-9_-]{6,})/,
+  ];
+  // Try the raw URL first (handles already-decoded or directly-embedded YouTube links)
+  for(const re of patterns){
+    const m=url.match(re);
+    if(m)return m[1];
+  }
+  // Try unwrapping a Google redirect wrapper: ?q=<encoded target>
+  try{
+    const googleMatch=url.match(/[?&]q=([^&]+)/);
+    if(googleMatch){
+      const target=decodeURIComponent(googleMatch[1]);
+      for(const re of patterns){
+        const m=target.match(re);
+        if(m)return m[1];
+      }
+    }
+  }catch(e){
+    console.warn('No se pudo decodificar URL de redirect:',url,e);
+  }
+  // Last resort: the v= param may itself be URL-encoded inline (v%3DXXXX) without
+  // a full decode cycle — check for that literal pattern too.
+  const encodedMatch=url.match(/[?&]v%3D([a-zA-Z0-9_-]{6,})/i);
+  if(encodedMatch)return encodedMatch[1];
+  return null;
+}
+
+// Find the closest link annotation to a given Y position within a page's link list
+function findClosestLink(links, y, maxDist=18){
+  if(!links||!links.length)return null;
+  let best=null,bestDist=Infinity;
+  for(const link of links){
+    const dist=Math.abs(link.y-y);
+    if(dist<bestDist){bestDist=dist;best=link;}
+  }
+  if(best&&bestDist<=maxDist){
+    const id=extractYouTubeId(best.url);
+    if(!id)console.warn('Link encontrado pero no se pudo extraer ID de YouTube:',best.url);
+    return id;
+  }
+  return null;
+}
+
+function mergeCloseItems(items, links) {
   if (!items.length) return [];
   const merged = [];
   let current = { text: items[0].text, y: items[0].y, x: items[0].x };
@@ -587,12 +682,12 @@ function mergeCloseItems(items) {
     } else {
       // Clean up the text
       const clean = current.text.replace(/\s+/g, ' ').trim();
-      if (clean.length > 2) merged.push({ text: clean, y: current.y });
+      if (clean.length > 2) merged.push({ text: clean, y: current.y, videoId: findClosestLink(links, current.y) });
       current = { text: item.text, y: item.y, x: item.x };
     }
   }
   const clean = current.text.replace(/\s+/g, ' ').trim();
-  if (clean.length > 2) merged.push({ text: clean, y: current.y });
+  if (clean.length > 2) merged.push({ text: clean, y: current.y, videoId: findClosestLink(links, current.y) });
   return merged;
 }
 
@@ -665,7 +760,8 @@ function assignSectionNames(groups, pageIdx) {
       muscle: sec.muscle,
       sets: sec.type === 'warmup' ? 3 : sec.isCardio ? 1 : 3,
       reps: sec.type === 'warmup' ? '15' : sec.isCardio ? '15 min' : '10-12',
-      isCardio: sec.isCardio
+      isCardio: sec.isCardio,
+      videoId: item.videoId || null
     }));
 
     // Fix warmup first exercise (Bike Machine / Treadmill / etc) has 2 min reps
@@ -846,20 +942,59 @@ function renderTabs(){document.getElementById('dayTabs').innerHTML=aplan.days.ma
 function selDay(i){aday=i;renderTabs();renderDay(i);}
 function renderDay(i){
   const day=aplan.days[i];let h=`<div class="card"><div class="mu" style="margin-bottom:12px;font-weight:600;font-size:15px">${day.name}</div>`;
-  day.sections.forEach(sec=>{
+  day.sections.forEach((sec,si)=>{
     h+=`<div class="ssep">${sec.title}</div>`;
-    sec.exercises.forEach(ex=>{
+    sec.exercises.forEach((ex,ei)=>{
       const logs=getLogs(ex.name),last=logs.length?logs[logs.length-1]:null;const bc=BM[ex.muscle]||'bca';
       let hist='';
       if(last&&last.sets&&last.sets.length){const disp=ex.isCardio?last.sets[0].val+' min':last.sets.map(s=>`${s.val}kg×${s.reps}`).join(' | ');const allMx=logs.map(l=>Math.max(0,...(l.sets||[]).map(s=>parseFloat(s.val)||0)));const isPR=allMx.length>1&&allMx[allMx.length-1]>=Math.max(...allMx.slice(0,-1));
         hist=`<div style="margin-top:5px;display:flex;align-items:center;flex-wrap:wrap;gap:5px"><span style="font-size:12px;color:var(--text2)">Última S${last.week}: ${disp}</span>${isPR?'<span class="pr">🏆 PR</span>':''}${logs.length>1?`<span style="font-size:11px;color:var(--text2)">${logs.length} reg.</span>`:''}</div>`;}
       const replaceTag=ex.replacedWith?`<span class="replaced-tag">↔ Reemplazado: ${ex.replacedWith}</span>`:'';
       const regBtn=sec.type!=='warmup'?`<button class="btn btnsm btnp" style="white-space:nowrap;flex-shrink:0" onclick='openLogM(${JSON.stringify(ex)},${aplan.week})'>+ Log</button>`:'';
-      h+=`<div class="exrow"><div style="flex:1"><div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap"><span class="exn">${ex.name}</span><span class="bdg ${bc}">${ex.muscle}</span>${replaceTag}</div><div class="exs">${ex.sets} serie(s) · ${ex.reps}</div>${hist}</div>${regBtn}</div>`;
+      const vidKey=`v-${i}-${si}-${ei}`;
+      const videoToggle=ex.videoId?`<button class="video-toggle-btn" onclick="toggleVideo('${vidKey}')" id="btn-${vidKey}" aria-label="Ver video del ejercicio"><i class="ti ti-chevron-down"></i></button>`:'';
+      h+=`<div class="exrow"><div style="flex:1">
+        <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
+          <span class="exn">${ex.name}</span><span class="bdg ${bc}">${ex.muscle}</span>${replaceTag}${videoToggle}
+        </div>
+        <div class="exs">${ex.sets} serie(s) · ${ex.reps}</div>${hist}
+        ${ex.videoId?`<div class="video-drop" id="${vidKey}" style="display:none">${buildVideoEmbed(ex.videoId,vidKey)}</div>`:''}
+      </div>${regBtn}</div>`;
     });
   });
   h+='</div>';document.getElementById('wkEx').innerHTML=h;
 }
+
+function buildVideoEmbed(videoId,key){
+  // Thumbnail preview that plays inline when tapped (no autoplay-on-load to save data),
+  // and the YouTube logo / outer frame links out to the real video.
+  return `
+    <div class="yt-preview" id="thumb-${key}" onclick="playInlineVideo('${videoId}','${key}')">
+      <img src="https://img.youtube.com/vi/${videoId}/hqdefault.jpg" alt="Vista previa del video" loading="lazy">
+      <div class="yt-play-overlay"><i class="ti ti-player-play-filled"></i></div>
+    </div>
+    <a class="yt-open-link" href="https://www.youtube.com/watch?v=${videoId}" target="_blank" rel="noopener">
+      <i class="ti ti-brand-youtube"></i> Ver en YouTube
+    </a>`;
+}
+
+function toggleVideo(key){
+  const el=document.getElementById(key);
+  const btn=document.getElementById('btn-'+key);
+  if(!el)return;
+  const isOpen=el.style.display!=='none';
+  el.style.display=isOpen?'none':'block';
+  if(btn)btn.classList.toggle('open',!isOpen);
+}
+
+function playInlineVideo(videoId,key){
+  const thumb=document.getElementById('thumb-'+key);
+  if(!thumb)return;
+  thumb.outerHTML=`<div class="yt-iframe-wrap">
+    <iframe src="https://www.youtube.com/embed/${videoId}?autoplay=1&rel=0" title="Video del ejercicio" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen loading="lazy"></iframe>
+  </div>`;
+}
+
 function getLogs(name){return Object.values(db.logs).filter(l=>l.exercise===name).sort((a,b)=>a.week-b.week||(a.date||'').localeCompare(b.date||''));}
 
 // ─── LOG MODAL ────────────────────────────────────────────────────────────────
