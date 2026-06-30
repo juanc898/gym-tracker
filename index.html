@@ -520,13 +520,16 @@ async function handleUpload(inp){
           y:Math.round(pageH-item.transform[5]),
           w:Math.round(item.width)
         }));
-      // Extract link annotations (hyperlinks) with their position and target URL
+      // Extract link annotations (hyperlinks) with their position and target URL.
+      // PDF.js validates URLs and may reject unusual ones (like nested Google redirect
+      // links), leaving `.url` undefined and only populating `.unsafeUrl` instead —
+      // so we must check both.
       const links=annotations
-        .filter(a=>a.subtype==='Link'&&a.url)
+        .filter(a=>a.subtype==='Link'&&(a.url||a.unsafeUrl))
         .map(a=>{
           const rect=a.rect; // [x0, y0, x1, y1] in PDF coords (bottom-up)
           return{
-            url:a.url,
+            url:a.url||a.unsafeUrl,
             x0:Math.round(rect[0]),
             x1:Math.round(rect[2]),
             // Convert to top-down, use vertical midpoint of the link rect
@@ -542,6 +545,14 @@ async function handleUpload(inp){
     if(!plan||plan.days.length===0){
       setStatus('❌ No se encontraron ejercicios en este PDF','Asegúrate de subir el PDF del plan de entrenamiento de tu entrenador.',0);
       return;
+    }
+
+    // Diagnostic: log how many exercises got a matched video link
+    const allEx=plan.days.flatMap(d=>d.sections.flatMap(s=>s.exercises));
+    const withVideo=allEx.filter(e=>e.videoId).length;
+    console.log(`PULSE: ${withVideo}/${allEx.length} ejercicios con video de YouTube vinculado.`);
+    if(withVideo===0){
+      console.warn('Ningún ejercicio obtuvo video. Revisa si el PDF tiene hipervínculos reales en los nombres de ejercicios.');
     }
 
     const total=plan.days.reduce((a,d)=>a+d.sections.reduce((b,s)=>b+s.exercises.length,0),0);
@@ -611,29 +622,38 @@ function parsePlan(pages, weekNum, filename) {
 // We need to unwrap these to get the real YouTube video ID.
 function extractYouTubeId(url){
   if(!url)return null;
+  const patterns=[
+    /(?:youtube\.com\/watch\?v=|youtube\.com\/watch\?.*[&?]v=)([a-zA-Z0-9_-]{6,})/,
+    /youtu\.be\/([a-zA-Z0-9_-]{6,})/,
+    /youtube\.com\/embed\/([a-zA-Z0-9_-]{6,})/,
+  ];
+  // Try the raw URL first (handles already-decoded or directly-embedded YouTube links)
+  for(const re of patterns){
+    const m=url.match(re);
+    if(m)return m[1];
+  }
+  // Try unwrapping a Google redirect wrapper: ?q=<encoded target>
   try{
-    // First, unwrap Google redirect links by reading the `q` query param
-    let target=url;
     const googleMatch=url.match(/[?&]q=([^&]+)/);
     if(googleMatch){
-      target=decodeURIComponent(googleMatch[1]);
+      const target=decodeURIComponent(googleMatch[1]);
+      for(const re of patterns){
+        const m=target.match(re);
+        if(m)return m[1];
+      }
     }
-    // Now extract the YouTube video ID from common URL formats
-    const patterns=[
-      /(?:youtube\.com\/watch\?v=|youtube\.com\/watch\?.*[&?]v=)([a-zA-Z0-9_-]{6,})/,
-      /youtu\.be\/([a-zA-Z0-9_-]{6,})/,
-      /youtube\.com\/embed\/([a-zA-Z0-9_-]{6,})/,
-    ];
-    for(const re of patterns){
-      const m=target.match(re);
-      if(m)return m[1];
-    }
-  }catch(e){}
+  }catch(e){
+    console.warn('No se pudo decodificar URL de redirect:',url,e);
+  }
+  // Last resort: the v= param may itself be URL-encoded inline (v%3DXXXX) without
+  // a full decode cycle — check for that literal pattern too.
+  const encodedMatch=url.match(/[?&]v%3D([a-zA-Z0-9_-]{6,})/i);
+  if(encodedMatch)return encodedMatch[1];
   return null;
 }
 
 // Find the closest link annotation to a given Y position within a page's link list
-function findClosestLink(links, y, maxDist=14){
+function findClosestLink(links, y, maxDist=18){
   if(!links||!links.length)return null;
   let best=null,bestDist=Infinity;
   for(const link of links){
@@ -641,7 +661,9 @@ function findClosestLink(links, y, maxDist=14){
     if(dist<bestDist){bestDist=dist;best=link;}
   }
   if(best&&bestDist<=maxDist){
-    return extractYouTubeId(best.url);
+    const id=extractYouTubeId(best.url);
+    if(!id)console.warn('Link encontrado pero no se pudo extraer ID de YouTube:',best.url);
+    return id;
   }
   return null;
 }
