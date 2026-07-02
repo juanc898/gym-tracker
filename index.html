@@ -411,7 +411,7 @@ button{cursor:pointer;font-family:inherit}
 <div id="pg-weight" class="pg">
   <div class="card">
     <div class="ttl" data-i18n="weight_register_title">Registrar peso semanal</div>
-    <div class="g2" style="margin-bottom:10px">
+    <div class="g2" style="margin-bottom:10px;align-items:flex-end">
       <div><div class="mu" style="margin-bottom:4px;font-size:13px" data-i18n="date_field">Fecha</div><input type="date" id="wDate"></div>
       <div>
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
@@ -525,6 +525,22 @@ button{cursor:pointer;font-family:inherit}
 </div>
 </div>
 
+<!-- MODAL: editar peso -->
+<div id="mdWeightEdit" style="display:none" class="mdbg" onclick="if(event.target===this)closeM('mdWeightEdit')">
+<div class="mdl">
+  <div class="mhdr"><span style="font-size:16px;font-weight:700" data-i18n="edit_weight_title">Editar registro de peso</span><button class="xbtn" onclick="closeM('mdWeightEdit')">×</button></div>
+  <div class="g2" style="margin-bottom:12px;align-items:flex-end">
+    <div><div class="mu" style="margin-bottom:4px;font-size:13px" data-i18n="date_field">Fecha</div><input type="date" id="wEditDate"></div>
+    <div><div class="mu" style="margin-bottom:4px;font-size:13px">kg</div><input type="number" id="wEditKg" step="0.1" min="1" max="700" placeholder="82.5"></div>
+  </div>
+  <div style="margin-bottom:16px"><div class="mu" style="margin-bottom:4px;font-size:13px" data-i18n="notes_field">Notas</div><input type="text" id="wEditNotes" placeholder="Opcional..." data-i18n-placeholder="notes_placeholder"></div>
+  <div class="flex-row">
+    <button class="btn btnd" onclick="deleteWeightEntry()" style="flex:1"><i class="ti ti-trash"></i> <span data-i18n="delete">Borrar</span></button>
+    <button class="btn btnp" onclick="saveWeightEdit()" style="flex:2" data-i18n="save_changes">Guardar cambios</button>
+  </div>
+</div>
+</div>
+
 <!-- MODAL: idioma -->
 <div id="mdLanguage" style="display:none" class="mdbg" onclick="if(event.target===this)closeM('mdLanguage')">
 <div class="mdl">
@@ -623,6 +639,7 @@ const I18N={
     max_kg_per_session:'Máx kg por sesión', no_records_use_log:'Sin registros aún.<br>Usa "+ Log" en Rutina.',
     // Weight page
     weight_register_title:'Registrar peso semanal',
+    edit_weight_title:'Editar registro de peso',
     weight_field:'Peso', date_field:'Fecha', notes_field:'Notas', notes_placeholder:'Opcional...',
     save_weight:'Guardar peso', weight_evolution:'Evolución de peso corporal',
     no_records_yet:'Sin registros aún',
@@ -753,6 +770,7 @@ const I18N={
     max_label:'Max', see_more:'See →', records_count:'rec.',
     max_kg_per_session:'Max kg per session', no_records_use_log:'No records yet.<br>Use "+ Log" in Routine.',
     weight_register_title:'Log weekly weight',
+    edit_weight_title:'Edit weight entry',
     weight_field:'Weight', date_field:'Date', notes_field:'Notes', notes_placeholder:'Optional...',
     save_weight:'Save weight', weight_evolution:'Body weight progress',
     no_records_yet:'No records yet',
@@ -1616,7 +1634,49 @@ function renderWChart(){
   const bars=ws.map(w=>{const h=Math.max(8,Math.round(((w.val-mn)/rng)*60+8));return `<div style="display:flex;flex-direction:column;align-items:center;flex:1;gap:3px"><div style="font-size:10px;color:var(--text2)">${w.val}</div><div style="width:100%;background:#9FE1CB;border-radius:4px 4px 0 0;height:${h}px"></div><div style="font-size:10px;color:var(--text2)">${w.date.slice(5)}</div></div>`;}).join('');
   const f=db.weights[0].val,l=db.weights[db.weights.length-1].val,d=Math.round((l-f)*10)/10;
   document.getElementById('wChart').innerHTML=`<div class="g3" style="margin-bottom:12px"><div class="met"><div class="mv">${l}kg</div><div class="mlb">${t('current_label')}</div></div><div class="met"><div class="mv">${Math.min(...db.weights.map(w=>w.val))}kg</div><div class="mlb">${t('min_label')}</div></div><div class="met"><div class="mv" style="color:${d>0?'#0F6E56':d<0?'#993C1D':'var(--text)'}">${d>0?'+':''}${d}kg</div><div class="mlb">${t('change_label')}</div></div></div><div style="display:flex;align-items:flex-end;gap:4px;height:72px">${bars}</div>`;
-  document.getElementById('wLog').innerHTML=db.weights.slice().reverse().map(w=>`<div class="hrow"><span style="width:8px;height:8px;border-radius:50%;background:#1D9E75;display:inline-block;flex-shrink:0"></span><span style="flex:1;font-weight:600;font-size:14px">${w.val} kg</span><span class="mu" style="font-size:13px">${w.date}</span>${w.notes?`<span class="mu" style="font-size:12px;font-style:italic">${w.notes}</span>`:''}</div>`).join('');
+  // Weight log list with edit buttons — use array index (reversed display, original index)
+  const total=db.weights.length;
+  document.getElementById('wLog').innerHTML=db.weights.slice().reverse().map((w,ri)=>{
+    const originalIdx=total-1-ri; // map back to original array index
+    return `<div class="hrow">
+      <span style="width:8px;height:8px;border-radius:50%;background:#1D9E75;display:inline-block;flex-shrink:0"></span>
+      <span style="flex:1;font-weight:600;font-size:14px">${w.val} kg</span>
+      <span class="mu" style="font-size:13px">${w.date}</span>
+      ${w.notes?`<span class="mu" style="font-size:12px;font-style:italic;max-width:90px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${w.notes}</span>`:''}
+      <button class="btn btnsm" onclick="openWeightEdit(${originalIdx})" style="flex-shrink:0;margin-left:4px"><i class="ti ti-edit"></i></button>
+    </div>`;
+  }).join('');
+}
+
+let editingWeightIdx=null;
+
+function openWeightEdit(idx){
+  editingWeightIdx=idx;
+  const w=db.weights[idx];
+  if(!w)return;
+  document.getElementById('wEditDate').value=w.date;
+  document.getElementById('wEditKg').value=w.val;
+  document.getElementById('wEditNotes').value=w.notes||'';
+  document.getElementById('mdWeightEdit').style.display='flex';
+}
+
+function saveWeightEdit(){
+  if(editingWeightIdx===null)return;
+  const val=parseFloat(document.getElementById('wEditKg').value);
+  const date=document.getElementById('wEditDate').value;
+  const notes=document.getElementById('wEditNotes').value;
+  if(!val||!date){alert(t('alert_enter_date_weight'));return;}
+  db.weights[editingWeightIdx]={val,date,notes};
+  db.weights.sort((a,b)=>a.date.localeCompare(b.date));
+  lsave();renderWChart();closeM('mdWeightEdit');
+  notif('✓ '+t('n_record_updated'));
+}
+
+function deleteWeightEntry(){
+  if(editingWeightIdx===null)return;
+  db.weights.splice(editingWeightIdx,1);
+  lsave();renderWChart();closeM('mdWeightEdit');
+  notif(t('n_record_deleted'));
 }
 
 function closeM(id){document.getElementById(id).style.display='none';if(id==='mdDetail'&&dChart){dChart.destroy();dChart=null;}}
