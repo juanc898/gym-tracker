@@ -76,6 +76,11 @@ button{cursor:pointer;font-family:inherit}
 .met{background:var(--bg2);border-radius:var(--radius-sm);padding:12px 8px;text-align:center}
 .mv{font-size:22px;font-weight:600}.mlb{font-size:11px;color:var(--text2);margin-top:2px}
 .exrow{display:flex;align-items:flex-start;gap:10px;padding:12px 0;border-bottom:1px solid var(--border)}.exrow:last-child{border-bottom:none}
+/* Exercise completion indicator */
+.ex-check{flex-shrink:0;width:26px;height:26px;border-radius:50%;border:2px solid var(--border);display:flex;align-items:center;justify-content:center;margin-top:1px;transition:.2s;background:var(--bg2)}
+.ex-check.done{background:var(--green);border-color:var(--green)}
+.ex-check.done i{color:#fff;font-size:14px}
+.ex-check:not(.done) i{display:none}
 .exn{font-size:14px;font-weight:600;line-height:1.3}.exs{font-size:12px;color:var(--text2);margin-top:3px}
 .ssep{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--text2);padding:10px 0 4px;border-top:1px solid var(--border);margin-top:4px}.ssep:first-child{border-top:none;padding-top:0}
 .hlist-row{display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--border);cursor:pointer}.hlist-row:last-child{border-bottom:none}
@@ -1398,11 +1403,15 @@ function loadDays(){const wk=parseInt(document.getElementById('wkSel').value);if
 function renderTabs(){document.getElementById('dayTabs').innerHTML=aplan.days.map((d,i)=>`<button class="dtab ${i===aday?'active':''}" onclick="selDay(${i})">${d.label}</button>`).join('');}
 function selDay(i){aday=i;renderTabs();renderDay(i);}
 function renderDay(i){
-  const day=aplan.days[i];let h=`<div class="card"><div class="mu" style="margin-bottom:12px;font-weight:600;font-size:15px">${day.name}</div>`;
+  const day=aplan.days[i];
+  const today=new Date().toISOString().split('T')[0];
+  let h=`<div class="card"><div class="mu" style="margin-bottom:12px;font-weight:600;font-size:15px">${day.name}</div>`;
   day.sections.forEach((sec,si)=>{
     h+=`<div class="ssep">${sec.title}</div>`;
     sec.exercises.forEach((ex,ei)=>{
       const logs=getLogs(ex.name),last=logs.length?logs[logs.length-1]:null;const bc=BM[ex.muscle]||'bca';
+      // Completed today = logged today for this week
+      const doneToday=logs.some(l=>l.date===today&&l.week===aplan.week);
       let hist='';
       if(last&&last.sets&&last.sets.length){const disp=ex.isCardio?last.sets[0].val+' min':last.sets.map(s=>`${s.val}kg×${s.reps}`).join(' | ');const allMx=logs.map(l=>Math.max(0,...(l.sets||[]).map(s=>parseFloat(s.val)||0)));const isPR=allMx.length>1&&allMx[allMx.length-1]>=Math.max(...allMx.slice(0,-1));
         hist=`<div style="margin-top:5px;display:flex;align-items:center;flex-wrap:wrap;gap:5px"><span style="font-size:12px;color:var(--text2)">${t('last_label')} S${last.week}: ${disp}</span>${isPR?'<span class="pr">🏆 PR</span>':''}${logs.length>1?`<span style="font-size:11px;color:var(--text2)">${logs.length} ${t('records_label')}</span>`:''}</div>`;}
@@ -1410,7 +1419,9 @@ function renderDay(i){
       const regBtn=sec.type!=='warmup'?`<button class="btn btnsm btnp" style="white-space:nowrap;flex-shrink:0" onclick='openLogM(${JSON.stringify(ex)},${aplan.week})'>${t('log_btn')}</button>`:'';
       const vidKey=`v-${i}-${si}-${ei}`;
       const videoToggle=ex.videoId?`<button class="video-toggle-btn" onclick="toggleVideo('${vidKey}')" id="btn-${vidKey}" aria-label="Ver video del ejercicio"><i class="ti ti-chevron-down"></i></button>`:'';
-      h+=`<div class="exrow"><div style="flex:1">
+      // Check circle: green with checkmark if done today, empty circle if not
+      const checkCircle=`<div class="ex-check${doneToday?' done':''}"><i class="ti ti-check"></i></div>`;
+      h+=`<div class="exrow">${checkCircle}<div style="flex:1">
         <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
           <span class="exn">${ex.name}</span><span class="bdg ${bc}">${ex.muscle}</span>${replaceTag}${videoToggle}
         </div>
