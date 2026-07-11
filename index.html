@@ -19,7 +19,7 @@
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
   import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged, sendPasswordResetEmail, updatePassword, reauthenticateWithCredential, EmailAuthProvider } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-  import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+  import { getFirestore, doc, getDoc, setDoc, collection, getDocs, deleteDoc, updateDoc, arrayUnion, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
   const firebaseConfig = {
     apiKey: "AIzaSyAG7PTKRK0rsJR8x7vUqpIVIUdqt1q1rVQ",
@@ -48,6 +48,12 @@
   window.fbDoc = doc;
   window.fbGetDoc = getDoc;
   window.fbSetDoc = setDoc;
+  window.fbCollection = collection;
+  window.fbGetDocs = getDocs;
+  window.fbDeleteDoc = deleteDoc;
+  window.fbUpdateDoc = updateDoc;
+  window.fbArrayUnion = arrayUnion;
+  window.fbServerTimestamp = serverTimestamp;
 
   // Signal that Firebase is ready
   window.dispatchEvent(new Event('firebase-ready'));
@@ -168,6 +174,17 @@ button{cursor:pointer;font-family:inherit}
 .coach-feedback-badge i{font-size:16px;color:#F59E0B;flex-shrink:0;margin-top:1px}
 .coach-feedback-badge-text{font-size:13px;line-height:1.5;color:var(--text);flex:1}
 .coach-feedback-badge-week{font-size:11px;color:var(--text2);margin-top:3px}
+/* Admin panel */
+.admin-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:16px}
+.admin-stat{background:var(--bg2);border-radius:var(--radius-sm);padding:12px 8px;text-align:center}
+.admin-stat-val{font-size:24px;font-weight:700;color:var(--green)}
+.admin-stat-lbl{font-size:11px;color:var(--text2);margin-top:2px}
+.admin-user-card{background:var(--bg2);border-radius:var(--radius-sm);padding:14px;margin-bottom:10px;border:1px solid var(--border)}
+.admin-user-header{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+.admin-user-avatar{width:36px;height:36px;border-radius:50%;background:var(--green);color:#fff;font-size:16px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.admin-user-meta{display:flex;flex-direction:column;gap:4px}
+.admin-meta-item{font-size:12px;color:var(--text2);display:flex;align-items:center;gap:5px}
+.admin-meta-item i{font-size:13px}
 /* LOGIN SCREEN */
 #loginScreen{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;padding:20px;background:var(--bg2);gap:20px}
 .login-box{width:100%;max-width:380px;background:var(--bg);border-radius:var(--radius);padding:32px 24px;box-shadow:var(--shadow)}
@@ -316,6 +333,10 @@ button{cursor:pointer;font-family:inherit}
         <button class="settings-item" onclick="openLanguageModal()">
           <i class="ti ti-language"></i> <span data-i18n="settings_language">Idioma</span>
           <span class="settings-item-suffix" id="langSuffix">Español</span>
+        </button>
+        <div class="settings-divider"></div>
+        <button class="settings-item" onclick="openAdminPanel()">
+          <i class="ti ti-shield-lock"></i> <span>Administrador</span>
         </button>
         <div class="settings-divider"></div>
         <button class="settings-item settings-item-danger" onclick="openResetDataModal()">
@@ -535,6 +556,31 @@ button{cursor:pointer;font-family:inherit}
   <div class="mhdr"><span style="font-size:16px;font-weight:700" data-i18n="export_title">Exportar a Excel</span><button class="xbtn" onclick="closeM('mdExport')">×</button></div>
   <p class="mu" style="margin-bottom:16px;font-size:13px" data-i18n="export_desc">Descarga todos tus registros (ejercicios, sets, repeticiones y peso corporal) en un archivo .xlsx. Puedes usarlo como respaldo o para volver a cargar tus datos si tu sesión se borra.</p>
   <button class="btn btnp btn-block" onclick="exportToExcel()"><i class="ti ti-download"></i> <span data-i18n="download_excel">Descargar Excel</span></button>
+</div>
+</div>
+
+<!-- MODAL: clave de admin -->
+<div id="mdAdminKey" style="display:none" class="mdbg" onclick="if(event.target===this)closeM('mdAdminKey')">
+<div class="mdl" style="max-width:360px;margin:auto">
+  <div class="mhdr">
+    <span style="font-size:16px;font-weight:700;display:flex;align-items:center;gap:8px"><i class="ti ti-shield-lock" style="color:var(--green)"></i> Administrador</span>
+    <button class="xbtn" onclick="closeM('mdAdminKey')">×</button>
+  </div>
+  <p class="mu" style="margin-bottom:14px;font-size:13px">Introduce la clave de administrador para acceder al panel.</p>
+  <div class="login-error" id="adminKeyError"></div>
+  <input type="password" id="adminKeyInput" placeholder="••••••" style="margin-bottom:12px;font-size:18px;letter-spacing:.2em;text-align:center" onkeydown="if(event.key==='Enter')verifyAdminKey()">
+  <button class="btn btnp btn-block" id="adminKeySubmitBtn" onclick="verifyAdminKey()">Entrar</button>
+</div>
+</div>
+
+<!-- MODAL: panel de admin -->
+<div id="mdAdmin" style="display:none" class="mdbg" onclick="if(event.target===this)closeM('mdAdmin')">
+<div class="mdl" style="max-height:92vh">
+  <div class="mhdr">
+    <span style="font-size:16px;font-weight:700;display:flex;align-items:center;gap:8px"><i class="ti ti-shield-lock" style="color:var(--green)"></i> Panel de Administrador</span>
+    <button class="xbtn" onclick="closeM('mdAdmin')">×</button>
+  </div>
+  <div id="adminContent" style="margin-top:4px"></div>
 </div>
 </div>
 
@@ -1920,6 +1966,165 @@ async function handleChangePassword(){
   }
 }
 
+// ─── ADMIN PANEL ───────────────────────────────────────────────────────────────
+async function recordUserSession(user){
+  // Store/update user session data in admin/analytics/{uid}
+  const ref=window.fbDoc(window.fbDb,'admin','analytics');
+  const snap=await window.fbGetDoc(ref);
+  const now=new Date().toISOString();
+  const existing=snap.exists()?snap.data():{};
+  const users=existing.users||{};
+  const entry=users[user.uid]||{email:user.email,uid:user.uid,firstSeen:now,sessionCount:0,sessions:[]};
+  entry.email=user.email; // keep updated
+  entry.lastSeen=now;
+  entry.sessionCount=(entry.sessionCount||0)+1;
+  // Keep last 50 session timestamps to avoid doc growing forever
+  entry.sessions=([...(entry.sessions||[]),now]).slice(-50);
+  users[user.uid]=entry;
+  await window.fbSetDoc(ref,{users,updatedAt:now},{merge:true});
+}
+
+let adminVerified=false;
+
+function openAdminPanel(){
+  closeSettingsMenu();
+  if(adminVerified){
+    showAdminPanel();
+  }else{
+    document.getElementById('adminKeyInput').value='';
+    document.getElementById('adminKeyError').style.display='none';
+    document.getElementById('mdAdminKey').style.display='flex';
+    setTimeout(()=>document.getElementById('adminKeyInput').focus(),100);
+  }
+}
+
+async function verifyAdminKey(){
+  const entered=document.getElementById('adminKeyInput').value.trim();
+  if(!entered){return;}
+  const errEl=document.getElementById('adminKeyError');
+  errEl.style.display='none';
+  const btn=document.getElementById('adminKeySubmitBtn');
+  btn.disabled=true;btn.innerHTML='<span class="spinner"></span>';
+  try{
+    const ref=window.fbDoc(window.fbDb,'admin','config');
+    const snap=await window.fbGetDoc(ref);
+    if(!snap.exists()){
+      errEl.textContent='Configuración de admin no encontrada.';errEl.style.display='block';
+      btn.disabled=false;btn.textContent='Entrar';return;
+    }
+    const correctKey=snap.data().adminKey;
+    if(entered===String(correctKey)){
+      adminVerified=true;
+      closeM('mdAdminKey');
+      showAdminPanel();
+    }else{
+      errEl.textContent='Clave incorrecta.';errEl.style.display='block';
+    }
+  }catch(e){
+    errEl.textContent='Error verificando clave: '+e.message;errEl.style.display='block';
+  }
+  btn.disabled=false;btn.textContent='Entrar';
+}
+
+async function showAdminPanel(){
+  document.getElementById('adminContent').innerHTML=`<div style="text-align:center;padding:24px;color:var(--text2)"><span class="spinner" style="width:22px;height:22px;border-width:3px"></span></div>`;
+  document.getElementById('mdAdmin').style.display='flex';
+  try{
+    const ref=window.fbDoc(window.fbDb,'admin','analytics');
+    const snap=await window.fbGetDoc(ref);
+    if(!snap.exists()||!snap.data().users){
+      document.getElementById('adminContent').innerHTML='<div class="mu" style="text-align:center;padding:24px">Sin datos de usuarios aún.</div>';
+      return;
+    }
+    const users=Object.values(snap.data().users).sort((a,b)=>(b.sessionCount||0)-(a.sessionCount||0));
+    renderAdminContent(users);
+  }catch(e){
+    document.getElementById('adminContent').innerHTML=`<div style="color:var(--red);padding:16px">Error cargando datos: ${e.message}</div>`;
+  }
+}
+
+function renderAdminContent(users){
+  const totalUsers=users.length;
+  const totalSessions=users.reduce((a,u)=>a+(u.sessionCount||0),0);
+  const activeThisWeek=users.filter(u=>{
+    if(!u.lastSeen)return false;
+    const diff=(Date.now()-new Date(u.lastSeen).getTime())/(1000*60*60*24);
+    return diff<=7;
+  }).length;
+
+  let html=`
+    <div class="admin-stats">
+      <div class="admin-stat"><div class="admin-stat-val">${totalUsers}</div><div class="admin-stat-lbl">Usuarios</div></div>
+      <div class="admin-stat"><div class="admin-stat-val">${totalSessions}</div><div class="admin-stat-lbl">Sesiones</div></div>
+      <div class="admin-stat"><div class="admin-stat-val">${activeThisWeek}</div><div class="admin-stat-lbl">Activos 7d</div></div>
+    </div>
+    <div style="font-size:13px;font-weight:600;margin-bottom:10px;color:var(--text2);text-transform:uppercase;letter-spacing:.05em">Usuarios registrados</div>`;
+
+  users.forEach(u=>{
+    const last=u.lastSeen?new Date(u.lastSeen).toLocaleDateString():'—';
+    const first=u.firstSeen?new Date(u.firstSeen).toLocaleDateString():'—';
+    html+=`
+      <div class="admin-user-card">
+        <div class="admin-user-header">
+          <div class="admin-user-avatar">${(u.email||'?')[0].toUpperCase()}</div>
+          <div style="flex:1;min-width:0">
+            <div style="font-size:13px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${u.email||'—'}</div>
+            <div style="font-size:11px;color:var(--text2);margin-top:2px">
+              ${u.sessionCount||0} sesiones · Registro: ${first}
+            </div>
+          </div>
+        </div>
+        <div class="admin-user-meta">
+          <span class="admin-meta-item"><i class="ti ti-clock"></i> Último acceso: ${last}</span>
+          <span class="admin-meta-item"><i class="ti ti-refresh"></i> ${u.sessionCount||0} accesos</span>
+        </div>
+        <div class="flex-row" style="gap:8px;margin-top:10px">
+          <button class="btn btnsm" style="flex:1;font-size:12px" onclick="adminSendPasswordReset('${u.email}')">
+            <i class="ti ti-mail"></i> Reset contraseña
+          </button>
+          <button class="btn btnsm btnd" style="font-size:12px" onclick="adminDeleteUser('${u.uid}','${u.email}')">
+            <i class="ti ti-user-x"></i> Eliminar
+          </button>
+        </div>
+      </div>`;
+  });
+
+  document.getElementById('adminContent').innerHTML=html;
+}
+
+async function adminSendPasswordReset(email){
+  if(!email)return;
+  if(!confirm(`¿Enviar email de reset de contraseña a ${email}?`))return;
+  try{
+    await window.fbSendPasswordReset(window.fbAuth,email);
+    notif('✓ Email de reset enviado a '+email);
+  }catch(e){
+    alert('Error: '+e.message);
+  }
+}
+
+async function adminDeleteUser(uid,email){
+  if(!confirm(`¿Eliminar la cuenta de ${email}?\n\nSus datos en Firestore serán borrados. La cuenta de autenticación quedará inactiva hasta que Firebase la limpie automáticamente.\n\nEsta acción no se puede deshacer.`))return;
+  try{
+    // Delete user's data from Firestore
+    const userDataRef=window.fbDoc(window.fbDb,'users',uid);
+    await window.fbDeleteDoc(userDataRef);
+    // Remove from analytics
+    const analyticsRef=window.fbDoc(window.fbDb,'admin','analytics');
+    const snap=await window.fbGetDoc(analyticsRef);
+    if(snap.exists()){
+      const data=snap.data();
+      delete data.users[uid];
+      await window.fbSetDoc(analyticsRef,data);
+    }
+    notif('✓ Datos de '+email+' eliminados');
+    // Refresh the panel
+    showAdminPanel();
+  }catch(e){
+    alert('Error eliminando usuario: '+e.message);
+  }
+}
+
 // ─── LANGUAGE ──────────────────────────────────────────────────────────────────
 function openLanguageModal(){
   closeSettingsMenu();
@@ -2121,7 +2326,9 @@ async function startApp(){
       document.getElementById('loginPassword').value='';
       const btn=document.getElementById('loginSubmitBtn');
       btn.disabled=false;
-      btn.textContent=isRegisterMode?'Crear cuenta':'Iniciar sesión';
+      btn.textContent=isRegisterMode?t('register_title'):t('login_title');
+      // Record session for admin analytics (fire-and-forget, non-blocking)
+      recordUserSession(user).catch(()=>{});
     }else{
       currentUser=null;
       db={plans:{},logs:{},weights:[],settings:{},coachFeedback:{}};
