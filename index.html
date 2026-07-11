@@ -991,7 +991,7 @@ async function lsaveNow(){
   if(indicator){indicator.innerHTML='<i class="ti ti-cloud-upload"></i> Guardando...';indicator.classList.add('syncing');}
   try{
     const ref=window.fbDoc(window.fbDb,'users',currentUser.uid);
-    await window.fbSetDoc(ref,{data:JSON.stringify(db),updatedAt:Date.now()});
+    await window.fbSetDoc(ref,{data:JSON.stringify(db),updatedAt:Date.now(),email:currentUser.email});
     if(indicator){indicator.innerHTML='<i class="ti ti-cloud-check"></i> Sincronizado';indicator.classList.remove('syncing');}
   }catch(e){
     console.error('Error guardando en Firestore:',e);
@@ -2042,17 +2042,55 @@ async function showAdminPanel(){
   document.getElementById('adminContent').innerHTML=`<div style="text-align:center;padding:24px;color:var(--text2)"><span class="spinner" style="width:22px;height:22px;border-width:3px"></span></div>`;
   document.getElementById('mdAdmin').style.display='flex';
   try{
-    // Each user's session is stored in userSessions/{uid} — read them all
-    const sessionsRef=window.fbCollection(window.fbDb,'userSessions');
-    const snap=await window.fbGetDocs(sessionsRef);
-    if(snap.empty){
-      document.getElementById('adminContent').innerHTML='<div class="mu" style="text-align:center;padding:24px">Sin datos de usuarios aún.<br><small style="font-size:11px">Los datos aparecerán después del primer login de cada usuario.</small></div>';
+    // Source 1: userSessions — users who have logged in since the new version
+    const sessionsSnap=await window.fbGetDocs(window.fbCollection(window.fbDb,'userSessions'));
+    const sessionMap={};
+    sessionsSnap.docs.forEach(d=>{
+      const data=d.data();
+      sessionMap[d.id]=data;
+    });
+
+    // Source 2: users/ collection — ALL historical users who have ever saved data
+    const usersSnap=await window.fbGetDocs(window.fbCollection(window.fbDb,'users'));
+    const historicalUids=new Set(usersSnap.docs.map(d=>d.id));
+
+    // Build merged list: start with session data, then add historical users not yet in sessionMap
+    const merged={...sessionMap};
+
+    // For historical users without session data, try to extract email from their users doc
+    for(const doc of usersSnap.docs){
+      const uid=doc.id;
+      if(merged[uid])continue; // already have session data — skip
+      let email='—';
+      try{
+        const raw=doc.data();
+        if(raw.email)email=raw.email; // stored since new version
+      }catch(e){}
+      merged[uid]={
+        uid,
+        email,
+        firstSeen:null,
+        lastSeen:null,
+        sessionCount:0,
+        historical:true
+      };
+    }
+
+    const users=Object.values(merged).sort((a,b)=>{
+      // Sort: users with sessions first (by session count), then historical
+      if(a.historical&&!b.historical)return 1;
+      if(!a.historical&&b.historical)return -1;
+      return (b.sessionCount||0)-(a.sessionCount||0);
+    });
+
+    if(users.length===0){
+      document.getElementById('adminContent').innerHTML='<div class="mu" style="text-align:center;padding:24px">Sin usuarios registrados aún.</div>';
       return;
     }
-    const users=snap.docs.map(d=>d.data()).sort((a,b)=>(b.sessionCount||0)-(a.sessionCount||0));
     renderAdminContent(users);
   }catch(e){
     document.getElementById('adminContent').innerHTML=`<div style="color:var(--red);padding:16px;font-size:13px">Error cargando datos: ${e.message}</div>`;
+    console.error('Admin panel error:',e);
   }
 }
 
@@ -2076,26 +2114,30 @@ function renderAdminContent(users){
   users.forEach(u=>{
     const last=u.lastSeen?new Date(u.lastSeen).toLocaleDateString():'—';
     const first=u.firstSeen?new Date(u.firstSeen).toLocaleDateString():'—';
+    const emailDisplay=u.email&&u.email!=='—'?u.email:`UID: ${u.uid.slice(0,12)}...`;
+    const avatar=(u.email&&u.email!=='—'?u.email:'?')[0].toUpperCase();
+    const sessionBadge=u.historical
+      ?`<span style="font-size:10px;background:var(--bg3);color:var(--text2);padding:2px 6px;border-radius:4px;font-weight:500">Sin sesiones registradas aún</span>`
+      :`${u.sessionCount||0} sesiones · Registro: ${first}`;
     html+=`
       <div class="admin-user-card">
         <div class="admin-user-header">
-          <div class="admin-user-avatar">${(u.email||'?')[0].toUpperCase()}</div>
+          <div class="admin-user-avatar" style="${u.historical?'background:var(--bg3);color:var(--text2)':''}">${avatar}</div>
           <div style="flex:1;min-width:0">
-            <div style="font-size:13px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${u.email||'—'}</div>
-            <div style="font-size:11px;color:var(--text2);margin-top:2px">
-              ${u.sessionCount||0} sesiones · Registro: ${first}
-            </div>
+            <div style="font-size:13px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${emailDisplay}</div>
+            <div style="font-size:11px;color:var(--text2);margin-top:2px">${sessionBadge}</div>
           </div>
         </div>
+        ${!u.historical?`
         <div class="admin-user-meta">
           <span class="admin-meta-item"><i class="ti ti-clock"></i> Último acceso: ${last}</span>
           <span class="admin-meta-item"><i class="ti ti-refresh"></i> ${u.sessionCount||0} accesos</span>
-        </div>
+        </div>`:''}
         <div class="flex-row" style="gap:8px;margin-top:10px">
-          <button class="btn btnsm" style="flex:1;font-size:12px" onclick="adminSendPasswordReset('${u.email}')">
+          <button class="btn btnsm" style="flex:1;font-size:12px;${u.email==='—'?'opacity:.4;pointer-events:none':''}" onclick="adminSendPasswordReset('${u.email}')">
             <i class="ti ti-mail"></i> Reset contraseña
           </button>
-          <button class="btn btnsm btnd" style="font-size:12px" onclick="adminDeleteUser('${u.uid}','${u.email}')">
+          <button class="btn btnsm btnd" style="font-size:12px" onclick="adminDeleteUser('${u.uid}','${emailDisplay}')">
             <i class="ti ti-user-x"></i> Eliminar
           </button>
         </div>
