@@ -1968,20 +1968,32 @@ async function handleChangePassword(){
 
 // ─── ADMIN PANEL ───────────────────────────────────────────────────────────────
 async function recordUserSession(user){
-  // Store/update user session data in admin/analytics/{uid}
-  const ref=window.fbDoc(window.fbDb,'admin','analytics');
-  const snap=await window.fbGetDoc(ref);
+  // Each user writes ONLY their own document in the top-level 'userSessions' collection.
+  // Using a top-level collection (not subcollection of 'admin') avoids Firestore path issues
+  // and ensures each user writes independently without overwriting others.
+  const ref=window.fbDoc(window.fbDb,'userSessions',user.uid);
   const now=new Date().toISOString();
-  const existing=snap.exists()?snap.data():{};
-  const users=existing.users||{};
-  const entry=users[user.uid]||{email:user.email,uid:user.uid,firstSeen:now,sessionCount:0,sessions:[]};
-  entry.email=user.email; // keep updated
-  entry.lastSeen=now;
-  entry.sessionCount=(entry.sessionCount||0)+1;
-  // Keep last 50 session timestamps to avoid doc growing forever
-  entry.sessions=([...(entry.sessions||[]),now]).slice(-50);
-  users[user.uid]=entry;
-  await window.fbSetDoc(ref,{users,updatedAt:now},{merge:true});
+  const snap=await window.fbGetDoc(ref);
+  if(snap.exists()){
+    const existing=snap.data();
+    await window.fbSetDoc(ref,{
+      email:user.email,
+      uid:user.uid,
+      firstSeen:existing.firstSeen||now,
+      lastSeen:now,
+      sessionCount:(existing.sessionCount||0)+1,
+      sessions:([...(existing.sessions||[]),now]).slice(-50)
+    });
+  }else{
+    await window.fbSetDoc(ref,{
+      email:user.email,
+      uid:user.uid,
+      firstSeen:now,
+      lastSeen:now,
+      sessionCount:1,
+      sessions:[now]
+    });
+  }
 }
 
 let adminVerified=false;
@@ -2030,16 +2042,17 @@ async function showAdminPanel(){
   document.getElementById('adminContent').innerHTML=`<div style="text-align:center;padding:24px;color:var(--text2)"><span class="spinner" style="width:22px;height:22px;border-width:3px"></span></div>`;
   document.getElementById('mdAdmin').style.display='flex';
   try{
-    const ref=window.fbDoc(window.fbDb,'admin','analytics');
-    const snap=await window.fbGetDoc(ref);
-    if(!snap.exists()||!snap.data().users){
-      document.getElementById('adminContent').innerHTML='<div class="mu" style="text-align:center;padding:24px">Sin datos de usuarios aún.</div>';
+    // Each user's session is stored in userSessions/{uid} — read them all
+    const sessionsRef=window.fbCollection(window.fbDb,'userSessions');
+    const snap=await window.fbGetDocs(sessionsRef);
+    if(snap.empty){
+      document.getElementById('adminContent').innerHTML='<div class="mu" style="text-align:center;padding:24px">Sin datos de usuarios aún.<br><small style="font-size:11px">Los datos aparecerán después del primer login de cada usuario.</small></div>';
       return;
     }
-    const users=Object.values(snap.data().users).sort((a,b)=>(b.sessionCount||0)-(a.sessionCount||0));
+    const users=snap.docs.map(d=>d.data()).sort((a,b)=>(b.sessionCount||0)-(a.sessionCount||0));
     renderAdminContent(users);
   }catch(e){
-    document.getElementById('adminContent').innerHTML=`<div style="color:var(--red);padding:16px">Error cargando datos: ${e.message}</div>`;
+    document.getElementById('adminContent').innerHTML=`<div style="color:var(--red);padding:16px;font-size:13px">Error cargando datos: ${e.message}</div>`;
   }
 }
 
@@ -2106,17 +2119,12 @@ async function adminSendPasswordReset(email){
 async function adminDeleteUser(uid,email){
   if(!confirm(`¿Eliminar la cuenta de ${email}?\n\nSus datos en Firestore serán borrados. La cuenta de autenticación quedará inactiva hasta que Firebase la limpie automáticamente.\n\nEsta acción no se puede deshacer.`))return;
   try{
-    // Delete user's data from Firestore
+    // Delete user's gym data
     const userDataRef=window.fbDoc(window.fbDb,'users',uid);
     await window.fbDeleteDoc(userDataRef);
-    // Remove from analytics
-    const analyticsRef=window.fbDoc(window.fbDb,'admin','analytics');
-    const snap=await window.fbGetDoc(analyticsRef);
-    if(snap.exists()){
-      const data=snap.data();
-      delete data.users[uid];
-      await window.fbSetDoc(analyticsRef,data);
-    }
+    // Delete user's session record
+    const sessionRef=window.fbDoc(window.fbDb,'userSessions',uid);
+    await window.fbDeleteDoc(sessionRef);
     notif('✓ Datos de '+email+' eliminados');
     // Refresh the panel
     showAdminPanel();
