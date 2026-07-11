@@ -261,6 +261,18 @@ button{cursor:pointer;font-family:inherit}
 
     <div class="login-error" id="loginError"></div>
 
+    <!-- Name fields — only shown in register mode -->
+    <div id="registerNameFields" style="display:none">
+      <div class="login-field">
+        <label data-i18n="first_name_label">Nombre</label>
+        <input type="text" id="loginFirstName" placeholder="Juan" autocomplete="given-name">
+      </div>
+      <div class="login-field">
+        <label data-i18n="last_name_label">Apellido</label>
+        <input type="text" id="loginLastName" placeholder="García" autocomplete="family-name">
+      </div>
+    </div>
+
     <div class="login-field">
       <label data-i18n="email_label">Correo electrónico</label>
       <input type="email" id="loginEmail" placeholder="tu@correo.com" autocomplete="email">
@@ -330,6 +342,10 @@ button{cursor:pointer;font-family:inherit}
         </button>
         <input type="file" id="excelImportInput" accept=".xlsx" style="display:none" onchange="handleExcelImport(this)">
         <div class="settings-divider"></div>
+        <button class="settings-item" onclick="openProfileModal()">
+          <i class="ti ti-user-circle"></i> <span data-i18n="settings_profile">Perfil</span>
+          <span class="settings-item-suffix" id="profileNameSuffix"></span>
+        </button>
         <button class="settings-item" onclick="openLanguageModal()">
           <i class="ti ti-language"></i> <span data-i18n="settings_language">Idioma</span>
           <span class="settings-item-suffix" id="langSuffix">Español</span>
@@ -580,7 +596,35 @@ button{cursor:pointer;font-family:inherit}
     <span style="font-size:16px;font-weight:700;display:flex;align-items:center;gap:8px"><i class="ti ti-shield-lock" style="color:var(--green)"></i> Panel de Administrador</span>
     <button class="xbtn" onclick="closeM('mdAdmin')">×</button>
   </div>
-  <div id="adminContent" style="margin-top:4px"></div>
+  <!-- Search bar -->
+  <div class="sw" style="margin:8px 0 12px">
+    <i class="ti ti-search sic"></i>
+    <input type="text" id="adminSearch" placeholder="Buscar por nombre o email..." oninput="filterAdminUsers(this.value)" style="padding-left:36px">
+  </div>
+  <div id="adminContent" style="margin-top:0"></div>
+</div>
+</div>
+
+<!-- MODAL: perfil -->
+<div id="mdProfile" style="display:none" class="mdbg" onclick="if(event.target===this)closeM('mdProfile')">
+<div class="mdl">
+  <div class="mhdr">
+    <span style="font-size:16px;font-weight:700" data-i18n="settings_profile">Perfil</span>
+    <button class="xbtn" onclick="closeM('mdProfile')">×</button>
+  </div>
+  <div style="text-align:center;margin-bottom:16px">
+    <div class="admin-user-avatar" id="profileAvatar" style="width:56px;height:56px;font-size:24px;margin:0 auto 8px">?</div>
+    <div style="font-size:13px;color:var(--text2)" id="profileEmailDisplay"></div>
+  </div>
+  <div class="login-field">
+    <label data-i18n="first_name_label">Nombre</label>
+    <input type="text" id="profileFirstName" placeholder="Juan" autocomplete="given-name">
+  </div>
+  <div class="login-field">
+    <label data-i18n="last_name_label">Apellido</label>
+    <input type="text" id="profileLastName" placeholder="García" autocomplete="family-name">
+  </div>
+  <button class="btn btnp btn-block" onclick="saveProfile()" data-i18n="save_changes">Guardar cambios</button>
 </div>
 </div>
 
@@ -653,6 +697,7 @@ const I18N={
     // Settings menu
     settings_change_password:'Cambiar contraseña', settings_export_excel:'Exportar a Excel',
     settings_import_excel:'Importar desde Excel', settings_language:'Idioma',
+    settings_profile:'Perfil',
     settings_reset_data:'Resetear mis datos', settings_logout:'Cerrar sesión',
     // Upload page
     upload_title:'Subir plan de entrenamiento',
@@ -733,6 +778,7 @@ const I18N={
     login_sub:'PULSE — tus rutinas, donde sea',
     register_sub:'Regístrate para guardar tus rutinas en la nube',
     email_label:'Correo electrónico', password_label:'Contraseña',
+    first_name_label:'Nombre', last_name_label:'Apellido',
     forgot_password:'¿Olvidaste tu contraseña?',
     no_account:'¿No tienes cuenta?', register_link:'Regístrate',
     have_account:'¿Ya tienes cuenta?', login_link:'Inicia sesión',
@@ -793,6 +839,7 @@ const I18N={
     header_synced:'Synced', header_saving:'Saving...', header_save_error:'Save error',
     settings_change_password:'Change password', settings_export_excel:'Export to Excel',
     settings_import_excel:'Import from Excel', settings_language:'Language',
+    settings_profile:'Profile',
     settings_reset_data:'Reset my data', settings_logout:'Log out',
     upload_title:'Upload training plan',
     upload_desc:'Upload your trainer\'s PDF. The system reads exercise names directly from the file.',
@@ -867,6 +914,7 @@ const I18N={
     login_sub:'PULSE — your routines, anywhere',
     register_sub:'Sign up to save your routines in the cloud',
     email_label:'Email', password_label:'Password',
+    first_name_label:'First name', last_name_label:'Last name',
     forgot_password:'Forgot your password?',
     no_account:'Don\'t have an account?', register_link:'Sign up',
     have_account:'Already have an account?', login_link:'Log in',
@@ -991,7 +1039,13 @@ async function lsaveNow(){
   if(indicator){indicator.innerHTML='<i class="ti ti-cloud-upload"></i> Guardando...';indicator.classList.add('syncing');}
   try{
     const ref=window.fbDoc(window.fbDb,'users',currentUser.uid);
-    await window.fbSetDoc(ref,{data:JSON.stringify(db),updatedAt:Date.now()});
+    await window.fbSetDoc(ref,{
+      data:JSON.stringify(db),
+      updatedAt:Date.now(),
+      email:currentUser.email,
+      firstName:db.settings?.firstName||'',
+      lastName:db.settings?.lastName||''
+    });
     if(indicator){indicator.innerHTML='<i class="ti ti-cloud-check"></i> Sincronizado';indicator.classList.remove('syncing');}
   }catch(e){
     console.error('Error guardando en Firestore:',e);
@@ -1015,11 +1069,19 @@ async function lload(){
 async function init(){
   await lload();
   if(!db.plans)db.plans={};if(!db.logs)db.logs={};if(!db.weights)db.weights=[];if(!db.settings)db.settings={};if(!db.coachFeedback)db.coachFeedback={};
+  // If this is a new registration, save the name the user just entered
+  if(window._pendingProfile){
+    db.settings.firstName=window._pendingProfile.firstName;
+    db.settings.lastName=window._pendingProfile.lastName;
+    window._pendingProfile=null;
+    lsave();
+  }
   // Apply the user's saved language preference (defaults to Spanish)
   currentLang=(db.settings.language==='en')?'en':'es';
   try{localStorage.setItem('pulse_lang',currentLang);}catch(e){}
   applyStaticTranslations();
   updateLanguageModalUI();
+  updateProfileUI();
   document.getElementById('wDate').value=new Date().toISOString().split('T')[0];
   renderAll();
 }
@@ -1847,6 +1909,11 @@ function toggleAuthMode(){
   document.getElementById('toggleText').textContent=isRegisterMode?t('have_account'):t('no_account');
   document.getElementById('toggleLink').textContent=isRegisterMode?t('login_link'):t('register_link');
   document.getElementById('forgotWrap').style.display=isRegisterMode?'none':'block';
+  document.getElementById('registerNameFields').style.display=isRegisterMode?'block':'none';
+  if(!isRegisterMode){
+    document.getElementById('loginFirstName').value='';
+    document.getElementById('loginLastName').value='';
+  }
   hideLoginError();
 }
 function showLoginError(msg){const el=document.getElementById('loginError');el.textContent=msg;el.style.display='block';}
@@ -1873,12 +1940,30 @@ async function handleAuthSubmit(){
   const email=document.getElementById('loginEmail').value.trim();
   const password=document.getElementById('loginPassword').value;
   if(!email||!password){showLoginError(t('alert_complete_form'));return;}
+
+  // Validate name fields during registration
+  if(isRegisterMode){
+    const firstName=document.getElementById('loginFirstName').value.trim();
+    const lastName=document.getElementById('loginLastName').value.trim();
+    if(!firstName||!lastName){
+      showLoginError(currentLang==='en'?'Please enter your first and last name.':'Por favor ingresa tu nombre y apellido.');
+      return;
+    }
+  }
+
   const btn=document.getElementById('loginSubmitBtn');
   const originalText=btn.textContent;
   btn.disabled=true;btn.innerHTML='<span class="spinner"></span> '+t('processing');
   try{
-    if(isRegisterMode){await window.fbCreateUser(window.fbAuth,email,password);}
-    else{await window.fbSignIn(window.fbAuth,email,password);}
+    if(isRegisterMode){
+      const firstName=document.getElementById('loginFirstName').value.trim();
+      const lastName=document.getElementById('loginLastName').value.trim();
+      await window.fbCreateUser(window.fbAuth,email,password);
+      // onAuthStateChanged fires next; we store the name via a flag so init() can pick it up
+      window._pendingProfile={firstName,lastName};
+    }else{
+      await window.fbSignIn(window.fbAuth,email,password);
+    }
   }catch(e){
     showLoginError(translateAuthError(e.code));
     btn.disabled=false;btn.textContent=originalText;
@@ -1968,20 +2053,32 @@ async function handleChangePassword(){
 
 // ─── ADMIN PANEL ───────────────────────────────────────────────────────────────
 async function recordUserSession(user){
-  // Store/update user session data in admin/analytics/{uid}
-  const ref=window.fbDoc(window.fbDb,'admin','analytics');
-  const snap=await window.fbGetDoc(ref);
+  // Each user writes ONLY their own document in the top-level 'userSessions' collection.
+  // Using a top-level collection (not subcollection of 'admin') avoids Firestore path issues
+  // and ensures each user writes independently without overwriting others.
+  const ref=window.fbDoc(window.fbDb,'userSessions',user.uid);
   const now=new Date().toISOString();
-  const existing=snap.exists()?snap.data():{};
-  const users=existing.users||{};
-  const entry=users[user.uid]||{email:user.email,uid:user.uid,firstSeen:now,sessionCount:0,sessions:[]};
-  entry.email=user.email; // keep updated
-  entry.lastSeen=now;
-  entry.sessionCount=(entry.sessionCount||0)+1;
-  // Keep last 50 session timestamps to avoid doc growing forever
-  entry.sessions=([...(entry.sessions||[]),now]).slice(-50);
-  users[user.uid]=entry;
-  await window.fbSetDoc(ref,{users,updatedAt:now},{merge:true});
+  const snap=await window.fbGetDoc(ref);
+  if(snap.exists()){
+    const existing=snap.data();
+    await window.fbSetDoc(ref,{
+      email:user.email,
+      uid:user.uid,
+      firstSeen:existing.firstSeen||now,
+      lastSeen:now,
+      sessionCount:(existing.sessionCount||0)+1,
+      sessions:([...(existing.sessions||[]),now]).slice(-50)
+    });
+  }else{
+    await window.fbSetDoc(ref,{
+      email:user.email,
+      uid:user.uid,
+      firstSeen:now,
+      lastSeen:now,
+      sessionCount:1,
+      sessions:[now]
+    });
+  }
 }
 
 let adminVerified=false;
@@ -2030,20 +2127,85 @@ async function showAdminPanel(){
   document.getElementById('adminContent').innerHTML=`<div style="text-align:center;padding:24px;color:var(--text2)"><span class="spinner" style="width:22px;height:22px;border-width:3px"></span></div>`;
   document.getElementById('mdAdmin').style.display='flex';
   try{
-    const ref=window.fbDoc(window.fbDb,'admin','analytics');
-    const snap=await window.fbGetDoc(ref);
-    if(!snap.exists()||!snap.data().users){
-      document.getElementById('adminContent').innerHTML='<div class="mu" style="text-align:center;padding:24px">Sin datos de usuarios aún.</div>';
+    // Source 1: userSessions — users who have logged in since the new version
+    const sessionsSnap=await window.fbGetDocs(window.fbCollection(window.fbDb,'userSessions'));
+    const sessionMap={};
+    sessionsSnap.docs.forEach(d=>{
+      const data=d.data();
+      sessionMap[d.id]=data;
+    });
+
+    // Source 2: users/ collection — ALL historical users who have ever saved data
+    const usersSnap=await window.fbGetDocs(window.fbCollection(window.fbDb,'users'));
+    const historicalUids=new Set(usersSnap.docs.map(d=>d.id));
+
+    // Build merged list: start with session data, then add historical users not yet in sessionMap
+    const merged={...sessionMap};
+
+    // For historical users without session data, try to extract email and name from their users doc.
+    // Also patch session users that already exist in merged with their name data.
+    for(const doc of usersSnap.docs){
+      const uid=doc.id;
+      const raw=doc.data()||{};
+      if(merged[uid]){
+        // Enrich existing session entry with name if available
+        if(!merged[uid].firstName)merged[uid].firstName=raw.firstName||'';
+        if(!merged[uid].lastName)merged[uid].lastName=raw.lastName||'';
+        continue;
+      }
+      merged[uid]={
+        uid,
+        email:raw.email||'—',
+        firstName:raw.firstName||'',
+        lastName:raw.lastName||'',
+        firstSeen:null,
+        lastSeen:null,
+        sessionCount:0,
+        historical:true
+      };
+    }
+
+    const users=Object.values(merged).sort((a,b)=>{
+      // Sort: users with sessions first (by session count), then historical
+      if(a.historical&&!b.historical)return 1;
+      if(!a.historical&&b.historical)return -1;
+      return (b.sessionCount||0)-(a.sessionCount||0);
+    });
+
+    if(users.length===0){
+      document.getElementById('adminContent').innerHTML='<div class="mu" style="text-align:center;padding:24px">Sin usuarios registrados aún.</div>';
       return;
     }
-    const users=Object.values(snap.data().users).sort((a,b)=>(b.sessionCount||0)-(a.sessionCount||0));
     renderAdminContent(users);
   }catch(e){
-    document.getElementById('adminContent').innerHTML=`<div style="color:var(--red);padding:16px">Error cargando datos: ${e.message}</div>`;
+    document.getElementById('adminContent').innerHTML=`<div style="color:var(--red);padding:16px;font-size:13px">Error cargando datos: ${e.message}</div>`;
+    console.error('Admin panel error:',e);
   }
 }
 
+
+// Filter admin user list by name or email
+function filterAdminUsers(query){
+  if(!window._allAdminUsers)return;
+  const q=query.toLowerCase().trim();
+  if(!q){
+    renderAdminUserList(window._allAdminUsers);
+    return;
+  }
+  const filtered=window._allAdminUsers.filter(u=>{
+    const email=(u.email||'').toLowerCase();
+    const name=((u.firstName||'')+' '+(u.lastName||'')).toLowerCase();
+    return email.includes(q)||name.includes(q);
+  });
+  renderAdminUserList(filtered,true);
+}
+
 function renderAdminContent(users){
+  // Store all users globally so the search filter can work on them
+  window._allAdminUsers=users;
+  const searchEl=document.getElementById('adminSearch');
+  if(searchEl)searchEl.value='';
+
   const totalUsers=users.length;
   const totalSessions=users.reduce((a,u)=>a+(u.sessionCount||0),0);
   const activeThisWeek=users.filter(u=>{
@@ -2052,7 +2214,7 @@ function renderAdminContent(users){
     return diff<=7;
   }).length;
 
-  let html=`
+  const statsHtml=`
     <div class="admin-stats">
       <div class="admin-stat"><div class="admin-stat-val">${totalUsers}</div><div class="admin-stat-lbl">Usuarios</div></div>
       <div class="admin-stat"><div class="admin-stat-val">${totalSessions}</div><div class="admin-stat-lbl">Sesiones</div></div>
@@ -2060,36 +2222,53 @@ function renderAdminContent(users){
     </div>
     <div style="font-size:13px;font-weight:600;margin-bottom:10px;color:var(--text2);text-transform:uppercase;letter-spacing:.05em">Usuarios registrados</div>`;
 
+  document.getElementById('adminContent').innerHTML=statsHtml+'<div id="adminUserList"></div>';
+  renderAdminUserList(users);
+}
+
+function renderAdminUserList(users, isFiltered=false){
+  const listEl=document.getElementById('adminUserList');
+  if(!listEl)return;
+  if(!users.length){
+    listEl.innerHTML=`<div class="mu" style="text-align:center;padding:20px">${isFiltered?'Sin resultados para esa búsqueda.':'Sin usuarios aún.'}</div>`;
+    return;
+  }
+  let html='';
   users.forEach(u=>{
     const last=u.lastSeen?new Date(u.lastSeen).toLocaleDateString():'—';
     const first=u.firstSeen?new Date(u.firstSeen).toLocaleDateString():'—';
+    const emailDisplay=u.email&&u.email!=='—'?u.email:`UID: ${u.uid.slice(0,12)}...`;
+    const fullName=((u.firstName||'')+' '+(u.lastName||'')).trim();
+    const initials=fullName?(fullName.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase()):(u.email&&u.email!=='—'?u.email[0].toUpperCase():'?');
+    const sessionBadge=u.historical
+      ?`<span style="font-size:10px;background:var(--bg3);color:var(--text2);padding:2px 6px;border-radius:4px;font-weight:500">Sin sesiones registradas aún</span>`
+      :`${u.sessionCount||0} sesiones · Registro: ${first}`;
     html+=`
       <div class="admin-user-card">
         <div class="admin-user-header">
-          <div class="admin-user-avatar">${(u.email||'?')[0].toUpperCase()}</div>
+          <div class="admin-user-avatar" style="${u.historical?'background:var(--bg3);color:var(--text2)':''}">${initials}</div>
           <div style="flex:1;min-width:0">
-            <div style="font-size:13px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${u.email||'—'}</div>
-            <div style="font-size:11px;color:var(--text2);margin-top:2px">
-              ${u.sessionCount||0} sesiones · Registro: ${first}
-            </div>
+            ${fullName?`<div style="font-size:13px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${fullName}</div>`:''}
+            <div style="font-size:${fullName?'11px':'13px'};font-weight:${fullName?'400':'600'};color:${fullName?'var(--text2)':'var(--text)'};overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${emailDisplay}</div>
+            <div style="font-size:11px;color:var(--text2);margin-top:2px">${sessionBadge}</div>
           </div>
         </div>
+        ${!u.historical?`
         <div class="admin-user-meta">
           <span class="admin-meta-item"><i class="ti ti-clock"></i> Último acceso: ${last}</span>
           <span class="admin-meta-item"><i class="ti ti-refresh"></i> ${u.sessionCount||0} accesos</span>
-        </div>
+        </div>`:''}
         <div class="flex-row" style="gap:8px;margin-top:10px">
-          <button class="btn btnsm" style="flex:1;font-size:12px" onclick="adminSendPasswordReset('${u.email}')">
+          <button class="btn btnsm" style="flex:1;font-size:12px;${!u.email||u.email==='—'?'opacity:.4;pointer-events:none':''}" onclick="adminSendPasswordReset('${u.email||''}')">
             <i class="ti ti-mail"></i> Reset contraseña
           </button>
-          <button class="btn btnsm btnd" style="font-size:12px" onclick="adminDeleteUser('${u.uid}','${u.email}')">
+          <button class="btn btnsm btnd" style="font-size:12px" onclick="adminDeleteUser('${u.uid}','${emailDisplay}')">
             <i class="ti ti-user-x"></i> Eliminar
           </button>
         </div>
       </div>`;
   });
-
-  document.getElementById('adminContent').innerHTML=html;
+  listEl.innerHTML=html;
 }
 
 async function adminSendPasswordReset(email){
@@ -2106,23 +2285,67 @@ async function adminSendPasswordReset(email){
 async function adminDeleteUser(uid,email){
   if(!confirm(`¿Eliminar la cuenta de ${email}?\n\nSus datos en Firestore serán borrados. La cuenta de autenticación quedará inactiva hasta que Firebase la limpie automáticamente.\n\nEsta acción no se puede deshacer.`))return;
   try{
-    // Delete user's data from Firestore
+    // Delete user's gym data
     const userDataRef=window.fbDoc(window.fbDb,'users',uid);
     await window.fbDeleteDoc(userDataRef);
-    // Remove from analytics
-    const analyticsRef=window.fbDoc(window.fbDb,'admin','analytics');
-    const snap=await window.fbGetDoc(analyticsRef);
-    if(snap.exists()){
-      const data=snap.data();
-      delete data.users[uid];
-      await window.fbSetDoc(analyticsRef,data);
-    }
+    // Delete user's session record
+    const sessionRef=window.fbDoc(window.fbDb,'userSessions',uid);
+    await window.fbDeleteDoc(sessionRef);
     notif('✓ Datos de '+email+' eliminados');
     // Refresh the panel
     showAdminPanel();
   }catch(e){
     alert('Error eliminando usuario: '+e.message);
   }
+}
+
+// ─── PROFILE ───────────────────────────────────────────────────────────────────
+function getFullName(){
+  const f=db.settings?.firstName||'';
+  const l=db.settings?.lastName||'';
+  return (f+' '+l).trim();
+}
+
+function updateProfileUI(){
+  // Update the suffix in the settings menu
+  const suffix=document.getElementById('profileNameSuffix');
+  if(suffix){
+    const name=getFullName();
+    suffix.textContent=name?name:'';
+  }
+  // Also update header — show first name next to email if available
+  const firstName=db.settings?.firstName||'';
+  const emailEl=document.getElementById('userEmailDisplay');
+  if(emailEl&&currentUser){
+    emailEl.textContent=firstName?`${firstName} · ${currentUser.email}`:currentUser.email;
+  }
+}
+
+function openProfileModal(){
+  closeSettingsMenu();
+  const firstName=db.settings?.firstName||'';
+  const lastName=db.settings?.lastName||'';
+  document.getElementById('profileFirstName').value=firstName;
+  document.getElementById('profileLastName').value=lastName;
+  document.getElementById('profileEmailDisplay').textContent=currentUser?.email||'';
+  const avatar=document.getElementById('profileAvatar');
+  if(avatar){
+    const initials=(firstName?firstName[0]:'')+(lastName?lastName[0]:'');
+    avatar.textContent=initials||((currentUser?.email||'?')[0].toUpperCase());
+  }
+  document.getElementById('mdProfile').style.display='flex';
+}
+
+function saveProfile(){
+  const firstName=document.getElementById('profileFirstName').value.trim();
+  const lastName=document.getElementById('profileLastName').value.trim();
+  db.settings=db.settings||{};
+  db.settings.firstName=firstName;
+  db.settings.lastName=lastName;
+  lsave();
+  updateProfileUI();
+  closeM('mdProfile');
+  notif('✓ '+(currentLang==='en'?'Profile updated':'Perfil actualizado'));
 }
 
 // ─── LANGUAGE ──────────────────────────────────────────────────────────────────
