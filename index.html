@@ -19,7 +19,7 @@
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
   import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged, sendPasswordResetEmail, updatePassword, reauthenticateWithCredential, EmailAuthProvider } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-  import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+  import { getFirestore, doc, getDoc, setDoc, collection, getDocs, deleteDoc, updateDoc, arrayUnion, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
   const firebaseConfig = {
     apiKey: "AIzaSyAG7PTKRK0rsJR8x7vUqpIVIUdqt1q1rVQ",
@@ -48,6 +48,12 @@
   window.fbDoc = doc;
   window.fbGetDoc = getDoc;
   window.fbSetDoc = setDoc;
+  window.fbCollection = collection;
+  window.fbGetDocs = getDocs;
+  window.fbDeleteDoc = deleteDoc;
+  window.fbUpdateDoc = updateDoc;
+  window.fbArrayUnion = arrayUnion;
+  window.fbServerTimestamp = serverTimestamp;
 
   // Signal that Firebase is ready
   window.dispatchEvent(new Event('firebase-ready'));
@@ -155,6 +161,30 @@ button{cursor:pointer;font-family:inherit}
 .yt-open-link{display:inline-flex;align-items:center;gap:6px;margin-top:8px;font-size:12px;color:var(--text2);text-decoration:none;font-weight:500}
 .yt-open-link:hover{color:var(--green)}
 .yt-open-link i{font-size:15px;color:#FF0000}
+/* Coach feedback */
+.coach-feedback-wrap{margin-top:10px;border-top:1px solid var(--border);padding-top:10px}
+.coach-feedback-label{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--text2);margin-bottom:6px;display:flex;align-items:center;gap:5px}
+.coach-feedback-label i{font-size:13px;color:#F59E0B}
+.coach-feedback-textarea{width:100%;font-size:13px;line-height:1.5;padding:8px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg2);color:var(--text);font-family:inherit;resize:none;min-height:62px;transition:.15s}
+.coach-feedback-textarea:focus{outline:none;border-color:#F59E0B;background:var(--bg)}
+.coach-feedback-save{margin-top:6px;padding:5px 12px;font-size:12px;font-weight:600;border-radius:6px;border:1px solid #F59E0B;background:rgba(245,158,11,.1);color:#92400E;cursor:pointer}
+.coach-feedback-save:hover{background:rgba(245,158,11,.2)}
+/* Coach feedback badge in history detail */
+.coach-feedback-badge{display:flex;align-items:flex-start;gap:8px;background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.25);border-radius:var(--radius-sm);padding:10px;margin-bottom:8px}
+.coach-feedback-badge i{font-size:16px;color:#F59E0B;flex-shrink:0;margin-top:1px}
+.coach-feedback-badge-text{font-size:13px;line-height:1.5;color:var(--text);flex:1}
+.coach-feedback-badge-week{font-size:11px;color:var(--text2);margin-top:3px}
+/* Admin panel */
+.admin-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:16px}
+.admin-stat{background:var(--bg2);border-radius:var(--radius-sm);padding:12px 8px;text-align:center}
+.admin-stat-val{font-size:24px;font-weight:700;color:var(--green)}
+.admin-stat-lbl{font-size:11px;color:var(--text2);margin-top:2px}
+.admin-user-card{background:var(--bg2);border-radius:var(--radius-sm);padding:14px;margin-bottom:10px;border:1px solid var(--border)}
+.admin-user-header{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+.admin-user-avatar{width:36px;height:36px;border-radius:50%;background:var(--green);color:#fff;font-size:16px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.admin-user-meta{display:flex;flex-direction:column;gap:4px}
+.admin-meta-item{font-size:12px;color:var(--text2);display:flex;align-items:center;gap:5px}
+.admin-meta-item i{font-size:13px}
 /* LOGIN SCREEN */
 #loginScreen{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;padding:20px;background:var(--bg2);gap:20px}
 .login-box{width:100%;max-width:380px;background:var(--bg);border-radius:var(--radius);padding:32px 24px;box-shadow:var(--shadow)}
@@ -303,6 +333,10 @@ button{cursor:pointer;font-family:inherit}
         <button class="settings-item" onclick="openLanguageModal()">
           <i class="ti ti-language"></i> <span data-i18n="settings_language">Idioma</span>
           <span class="settings-item-suffix" id="langSuffix">Español</span>
+        </button>
+        <div class="settings-divider"></div>
+        <button class="settings-item" onclick="openAdminPanel()">
+          <i class="ti ti-shield-lock"></i> <span>Administrador</span>
         </button>
         <div class="settings-divider"></div>
         <button class="settings-item settings-item-danger" onclick="openResetDataModal()">
@@ -525,6 +559,31 @@ button{cursor:pointer;font-family:inherit}
 </div>
 </div>
 
+<!-- MODAL: clave de admin -->
+<div id="mdAdminKey" style="display:none" class="mdbg" onclick="if(event.target===this)closeM('mdAdminKey')">
+<div class="mdl" style="max-width:360px;margin:auto">
+  <div class="mhdr">
+    <span style="font-size:16px;font-weight:700;display:flex;align-items:center;gap:8px"><i class="ti ti-shield-lock" style="color:var(--green)"></i> Administrador</span>
+    <button class="xbtn" onclick="closeM('mdAdminKey')">×</button>
+  </div>
+  <p class="mu" style="margin-bottom:14px;font-size:13px">Introduce la clave de administrador para acceder al panel.</p>
+  <div class="login-error" id="adminKeyError"></div>
+  <input type="password" id="adminKeyInput" placeholder="••••••" style="margin-bottom:12px;font-size:18px;letter-spacing:.2em;text-align:center" onkeydown="if(event.key==='Enter')verifyAdminKey()">
+  <button class="btn btnp btn-block" id="adminKeySubmitBtn" onclick="verifyAdminKey()">Entrar</button>
+</div>
+</div>
+
+<!-- MODAL: panel de admin -->
+<div id="mdAdmin" style="display:none" class="mdbg" onclick="if(event.target===this)closeM('mdAdmin')">
+<div class="mdl" style="max-height:92vh">
+  <div class="mhdr">
+    <span style="font-size:16px;font-weight:700;display:flex;align-items:center;gap:8px"><i class="ti ti-shield-lock" style="color:var(--green)"></i> Panel de Administrador</span>
+    <button class="xbtn" onclick="closeM('mdAdmin')">×</button>
+  </div>
+  <div id="adminContent" style="margin-top:4px"></div>
+</div>
+</div>
+
 <!-- MODAL: editar peso -->
 <div id="mdWeightEdit" style="display:none" class="mdbg" onclick="if(event.target===this)closeM('mdWeightEdit')">
 <div class="mdl">
@@ -655,6 +714,11 @@ const I18N={
     replaced_label:'Reemplazado', replaced_by:'Reemplazado por',
     edit_name:'Editar nombre', series_label:'Series', reps_label:'Reps',
     view_on_youtube:'Ver en YouTube',
+    coach_feedback:'Feedback del coach',
+    coach_feedback_placeholder:'Comentario del entrenador...',
+    coach_feedback_saved:'Feedback guardado',
+    coach_feedback_history:'Feedback del coach por semana',
+    no_coach_feedback:'Sin feedback aún',
     install_for:'Descargar para',
     install_ios_title:'Instalar en iPhone', install_android_title:'Instalar en Android',
     install_ios_step1:'Toca el botón de Compartir', install_ios_step1b:'en la barra de Safari',
@@ -785,6 +849,11 @@ const I18N={
     replaced_label:'Replaced', replaced_by:'Replaced by',
     edit_name:'Edit name', series_label:'Sets', reps_label:'Reps',
     view_on_youtube:'Watch on YouTube',
+    coach_feedback:'Coach feedback',
+    coach_feedback_placeholder:'Coach comment...',
+    coach_feedback_saved:'Feedback saved',
+    coach_feedback_history:'Coach feedback by week',
+    no_coach_feedback:'No feedback yet',
     install_for:'Download for',
     install_ios_title:'Install on iPhone', install_android_title:'Install on Android',
     install_ios_step1:'Tap the Share button', install_ios_step1b:'in the Safari toolbar',
@@ -896,7 +965,7 @@ function applyStaticTranslations(){
 const BM={Pecho:'bp',Hombro:'bh','Tríceps':'bt',Pierna:'bpi',Abs:'ba',Espalda:'be','Bíceps':'bbi',Cardio:'bc',Calentamiento:'bca'};
 
 const KEY='gymdb_v9';
-let db={plans:{},logs:{},weights:[]};
+let db={plans:{},logs:{},weights:[],settings:{},coachFeedback:{}};
 let aplan=null,aday=0,mEx=null,mWk=0,mSets=[],eKey=null,eEx=null,eSets=[],mFilter='',dChart=null;
 let pendingPlan=null;
 
@@ -936,16 +1005,16 @@ async function lload(){
     const ref=window.fbDoc(window.fbDb,'users',currentUser.uid);
     const snap=await window.fbGetDoc(ref);
     if(snap.exists()&&snap.data().data){db=JSON.parse(snap.data().data);}
-    else{db={plans:{},logs:{},weights:[]};}
+    else{db={plans:{},logs:{},weights:[],settings:{},coachFeedback:{}};}
   }catch(e){
     console.error('Error cargando de Firestore:',e);
-    db={plans:{},logs:{},weights:[]};
+    db={plans:{},logs:{},weights:[],settings:{},coachFeedback:{}};
   }
 }
 
 async function init(){
   await lload();
-  if(!db.plans)db.plans={};if(!db.logs)db.logs={};if(!db.weights)db.weights=[];if(!db.settings)db.settings={};
+  if(!db.plans)db.plans={};if(!db.logs)db.logs={};if(!db.weights)db.weights=[];if(!db.settings)db.settings={};if(!db.coachFeedback)db.coachFeedback={};
   // Apply the user's saved language preference (defaults to Spanish)
   currentLang=(db.settings.language==='en')?'en':'es';
   try{localStorage.setItem('pulse_lang',currentLang);}catch(e){}
@@ -1402,7 +1471,7 @@ function renderLoaded(){
 }
 function deleteWeek(wk){delete db.plans[wk];lsave();renderAll();fillSel();document.getElementById('wkEx').innerHTML='';document.getElementById('dayTabs').innerHTML='';notif(`${t('upload_week')} ${wk} ${t('n_week_deleted')}`);}
 function deleteAllWeeks(){db.plans={};lsave();renderAll();fillSel();document.getElementById('wkEx').innerHTML='';document.getElementById('dayTabs').innerHTML='';document.getElementById('delAll').style.display='none';notif(t('n_all_deleted'));}
-function doReset(){db={plans:{},logs:{},weights:[]};lsave();renderAll();fillSel();document.getElementById('wkEx').innerHTML='';document.getElementById('dayTabs').innerHTML='';document.getElementById('resetAll').style.display='none';notif(t('n_app_reset'));}
+function doReset(){db={plans:{},logs:{},weights:[],settings:{},coachFeedback:{}};lsave();renderAll();fillSel();document.getElementById('wkEx').innerHTML='';document.getElementById('dayTabs').innerHTML='';document.getElementById('resetAll').style.display='none';notif(t('n_app_reset'));}
 function refreshStats(){
   const weeks=Object.values(db.plans).filter(p=>p&&p.loaded).length;
   const names=new Set();Object.values(db.plans).filter(p=>p&&p.loaded).forEach(p=>p.days.forEach(d=>d.sections.forEach(s=>s.exercises.forEach(e=>names.add(e.name)))));
@@ -1423,6 +1492,7 @@ function selDay(i){aday=i;renderTabs();renderDay(i);}
 function renderDay(i){
   const day=aplan.days[i];
   const today=new Date().toISOString().split('T')[0];
+  if(!db.coachFeedback)db.coachFeedback={};
   let h=`<div class="card"><div class="mu" style="margin-bottom:12px;font-weight:600;font-size:15px">${day.name}</div>`;
   day.sections.forEach((sec,si)=>{
     h+=`<div class="ssep">${sec.title}</div>`;
@@ -1439,16 +1509,45 @@ function renderDay(i){
       const videoToggle=ex.videoId?`<button class="video-toggle-btn" onclick="toggleVideo('${vidKey}')" id="btn-${vidKey}" aria-label="Ver video del ejercicio"><i class="ti ti-chevron-down"></i></button>`:'';
       // Check circle: green with checkmark if done today, empty circle if not
       const checkCircle=`<div class="ex-check${doneToday?' done':''}"><i class="ti ti-check"></i></div>`;
+      // Coach feedback — stored per exercise+week key
+      const fbKey=`${ex.name}__w${aplan.week}`;
+      const fbText=(db.coachFeedback[fbKey]||'').replace(/"/g,'&quot;');
+      const feedbackSection=sec.type!=='warmup'?`
+        <div class="coach-feedback-wrap">
+          <div class="coach-feedback-label"><i class="ti ti-message-star"></i>${t('coach_feedback')}</div>
+          <textarea class="coach-feedback-textarea" id="fb-${fbKey.replace(/ /g,'_')}" placeholder="${t('coach_feedback_placeholder')}">${db.coachFeedback[fbKey]||''}</textarea>
+          <button class="coach-feedback-save" onclick="saveCoachFeedback('${fbKey.replace(/'/g,"\\'")}')">
+            <i class="ti ti-device-floppy"></i> ${t('save')}
+          </button>
+        </div>`:'';
       h+=`<div class="exrow">${checkCircle}<div style="flex:1">
         <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
           <span class="exn">${ex.name}</span><span class="bdg ${bc}">${ex.muscle}</span>${replaceTag}${videoToggle}
         </div>
         <div class="exs">${ex.sets} ${t('sets_label')} · ${ex.reps}</div>${hist}
         ${ex.videoId?`<div class="video-drop" id="${vidKey}" style="display:none">${buildVideoEmbed(ex.videoId,vidKey)}</div>`:''}
+        ${feedbackSection}
       </div>${regBtn}</div>`;
     });
   });
   h+='</div>';document.getElementById('wkEx').innerHTML=h;
+}
+
+function saveCoachFeedback(fbKey){
+  if(!db.coachFeedback)db.coachFeedback={};
+  // The DOM id replaces spaces with underscores so we need to match that
+  const domId='fb-'+fbKey.replace(/ /g,'_');
+  const el=document.getElementById(domId);
+  if(!el)return;
+  const text=el.value.trim();
+  if(text){
+    db.coachFeedback[fbKey]=text;
+  }else{
+    // Empty text = remove the entry entirely
+    delete db.coachFeedback[fbKey];
+  }
+  lsave();
+  notif('✓ '+t('coach_feedback_saved'));
 }
 
 function buildVideoEmbed(videoId,key){
@@ -1578,12 +1677,50 @@ function deleteLog(){if(!eKey)return;delete db.logs[eKey];lsave();refreshStats()
 function openDetailM(name,muscle,isCardio){
   const logs=getLogs(name);document.getElementById('mdName').textContent=name;document.getElementById('mdBadge').innerHTML=`<span class="bdg ${BM[muscle]||'bca'}">${muscle}</span>`;
   if(dChart){dChart.destroy();dChart=null;}const wrap=document.getElementById('mdChartWrap');const gc=window.matchMedia('(prefers-color-scheme:dark)').matches?'rgba(255,255,255,.08)':'rgba(0,0,0,.08)';
-  if(logs.length>=2&&!isCardio){wrap.style.display='block';dChart=new Chart(document.getElementById('mdCanvas'),{type:'line',data:{labels:logs.map(l=>'S'+l.week),datasets:[{data:logs.map(l=>Math.max(0,...(l.sets||[]).map(s=>parseFloat(s.val)||0))),borderColor:'#1D9E75',backgroundColor:'rgba(29,158,117,.12)',tension:.35,pointRadius:5,pointBackgroundColor:'#1D9E75',fill:true,borderWidth:2}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{ticks:{font:{size:11}},grid:{color:gc}},x:{ticks:{font:{size:11}},grid:{display:false}}}}});document.getElementById('mdLogs').innerHTML=`<div style="font-size:12px;color:var(--text2);margin-bottom:10px;display:flex;align-items:center;gap:6px"><span style="width:12px;height:3px;background:#1D9E75;display:inline-block;border-radius:2px"></span>${t('max_kg_per_session')}</div>`+buildLogList(logs,isCardio);}
-  else if(logs.length>=2&&isCardio){wrap.style.display='block';dChart=new Chart(document.getElementById('mdCanvas'),{type:'bar',data:{labels:logs.map(l=>'S'+l.week),datasets:[{data:logs.map(l=>parseFloat((l.sets||[{val:0}])[0].val)||0),backgroundColor:'rgba(29,158,117,.7)',borderRadius:6}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{ticks:{font:{size:11}},grid:{color:gc}},x:{ticks:{font:{size:11}},grid:{display:false}}}}});document.getElementById('mdLogs').innerHTML=buildLogList(logs,isCardio);}
-  else{wrap.style.display='none';document.getElementById('mdLogs').innerHTML=logs.length?buildLogList(logs,isCardio):`<div class="mu" style="text-align:center;padding:24px">${t('no_records_use_log')}</div>`;}
+  if(logs.length>=2&&!isCardio){wrap.style.display='block';dChart=new Chart(document.getElementById('mdCanvas'),{type:'line',data:{labels:logs.map(l=>'S'+l.week),datasets:[{data:logs.map(l=>Math.max(0,...(l.sets||[]).map(s=>parseFloat(s.val)||0))),borderColor:'#1D9E75',backgroundColor:'rgba(29,158,117,.12)',tension:.35,pointRadius:5,pointBackgroundColor:'#1D9E75',fill:true,borderWidth:2}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{ticks:{font:{size:11}},grid:{color:gc}},x:{ticks:{font:{size:11}},grid:{display:false}}}}});document.getElementById('mdLogs').innerHTML=`<div style="font-size:12px;color:var(--text2);margin-bottom:10px;display:flex;align-items:center;gap:6px"><span style="width:12px;height:3px;background:#1D9E75;display:inline-block;border-radius:2px"></span>${t('max_kg_per_session')}</div>`+buildLogList(logs,isCardio,name);}
+  else if(logs.length>=2&&isCardio){wrap.style.display='block';dChart=new Chart(document.getElementById('mdCanvas'),{type:'bar',data:{labels:logs.map(l=>'S'+l.week),datasets:[{data:logs.map(l=>parseFloat((l.sets||[{val:0}])[0].val)||0),backgroundColor:'rgba(29,158,117,.7)',borderRadius:6}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{ticks:{font:{size:11}},grid:{color:gc}},x:{ticks:{font:{size:11}},grid:{display:false}}}}});document.getElementById('mdLogs').innerHTML=buildLogList(logs,isCardio,name);}
+  else{wrap.style.display='none';document.getElementById('mdLogs').innerHTML=logs.length?buildLogList(logs,isCardio,name):`<div class="mu" style="text-align:center;padding:24px">${t('no_records_use_log')}</div>`;}
   document.getElementById('mdDetail').style.display='flex';
 }
-function buildLogList(logs,isCardio){const ak=Object.keys(db.logs);return `<div style="font-size:14px;font-weight:600;margin-bottom:8px">${t('all_records')}</div>`+logs.slice().reverse().map(l=>{const key=ak.find(k=>db.logs[k]===l)||'';const disp=isCardio?(l.sets||[]).map(s=>s.val+' min').join(', '):(l.sets||[]).map(s=>`${s.val}kg×${s.reps}`).join(' | ');return `<div class="hrow"><span class="wchip">S${l.week}</span><span style="flex:1;font-size:13px">${disp}</span><span class="mu" style="font-size:12px">${l.date||''}</span><button class="btn btnsm" onclick="openEditM('${key}')" style="margin-left:4px"><i class="ti ti-edit"></i></button></div>`;}).join('');}
+
+function buildLogList(logs,isCardio,exerciseName){
+  const ak=Object.keys(db.logs);
+  const fb=db.coachFeedback||{};
+
+  // Collect all feedback entries for this exercise across all weeks
+  const feedbackWeeks=Object.keys(fb)
+    .filter(k=>k.startsWith(exerciseName+'__w'))
+    .map(k=>({week:parseInt(k.split('__w')[1]),text:fb[k]}))
+    .filter(f=>f.text&&f.week)
+    .sort((a,b)=>b.week-a.week);
+
+  let feedbackSection='';
+  if(feedbackWeeks.length){
+    feedbackSection=`<div style="margin-bottom:14px">
+      <div style="font-size:14px;font-weight:600;margin-bottom:8px;display:flex;align-items:center;gap:6px">
+        <i class="ti ti-message-star" style="color:#F59E0B;font-size:16px"></i>
+        ${t('coach_feedback_history')}
+      </div>
+      ${feedbackWeeks.map(f=>`
+        <div class="coach-feedback-badge">
+          <i class="ti ti-quote"></i>
+          <div>
+            <div class="coach-feedback-badge-text">${f.text.replace(/\n/g,'<br>')}</div>
+            <div class="coach-feedback-badge-week"><span class="wchip">S${f.week}</span></div>
+          </div>
+        </div>`).join('')}
+    </div>`;
+  }
+
+  const recordsList=`<div style="font-size:14px;font-weight:600;margin-bottom:8px">${t('all_records')}</div>`+
+    logs.slice().reverse().map(l=>{
+      const key=ak.find(k=>db.logs[k]===l)||'';
+      const disp=isCardio?(l.sets||[]).map(s=>s.val+' min').join(', '):(l.sets||[]).map(s=>`${s.val}kg×${s.reps}`).join(' | ');
+      return `<div class="hrow"><span class="wchip">S${l.week}</span><span style="flex:1;font-size:13px">${disp}</span><span class="mu" style="font-size:12px">${l.date||''}</span><button class="btn btnsm" onclick="openEditM('${key}')" style="margin-left:4px"><i class="ti ti-edit"></i></button></div>`;
+    }).join('');
+
+  return feedbackSection+recordsList;
+}
 
 // ─── HISTORY ──────────────────────────────────────────────────────────────────
 function renderHistory(){
@@ -1829,6 +1966,165 @@ async function handleChangePassword(){
   }
 }
 
+// ─── ADMIN PANEL ───────────────────────────────────────────────────────────────
+async function recordUserSession(user){
+  // Store/update user session data in admin/analytics/{uid}
+  const ref=window.fbDoc(window.fbDb,'admin','analytics');
+  const snap=await window.fbGetDoc(ref);
+  const now=new Date().toISOString();
+  const existing=snap.exists()?snap.data():{};
+  const users=existing.users||{};
+  const entry=users[user.uid]||{email:user.email,uid:user.uid,firstSeen:now,sessionCount:0,sessions:[]};
+  entry.email=user.email; // keep updated
+  entry.lastSeen=now;
+  entry.sessionCount=(entry.sessionCount||0)+1;
+  // Keep last 50 session timestamps to avoid doc growing forever
+  entry.sessions=([...(entry.sessions||[]),now]).slice(-50);
+  users[user.uid]=entry;
+  await window.fbSetDoc(ref,{users,updatedAt:now},{merge:true});
+}
+
+let adminVerified=false;
+
+function openAdminPanel(){
+  closeSettingsMenu();
+  if(adminVerified){
+    showAdminPanel();
+  }else{
+    document.getElementById('adminKeyInput').value='';
+    document.getElementById('adminKeyError').style.display='none';
+    document.getElementById('mdAdminKey').style.display='flex';
+    setTimeout(()=>document.getElementById('adminKeyInput').focus(),100);
+  }
+}
+
+async function verifyAdminKey(){
+  const entered=document.getElementById('adminKeyInput').value.trim();
+  if(!entered){return;}
+  const errEl=document.getElementById('adminKeyError');
+  errEl.style.display='none';
+  const btn=document.getElementById('adminKeySubmitBtn');
+  btn.disabled=true;btn.innerHTML='<span class="spinner"></span>';
+  try{
+    const ref=window.fbDoc(window.fbDb,'admin','config');
+    const snap=await window.fbGetDoc(ref);
+    if(!snap.exists()){
+      errEl.textContent='Configuración de admin no encontrada.';errEl.style.display='block';
+      btn.disabled=false;btn.textContent='Entrar';return;
+    }
+    const correctKey=snap.data().adminKey;
+    if(entered===String(correctKey)){
+      adminVerified=true;
+      closeM('mdAdminKey');
+      showAdminPanel();
+    }else{
+      errEl.textContent='Clave incorrecta.';errEl.style.display='block';
+    }
+  }catch(e){
+    errEl.textContent='Error verificando clave: '+e.message;errEl.style.display='block';
+  }
+  btn.disabled=false;btn.textContent='Entrar';
+}
+
+async function showAdminPanel(){
+  document.getElementById('adminContent').innerHTML=`<div style="text-align:center;padding:24px;color:var(--text2)"><span class="spinner" style="width:22px;height:22px;border-width:3px"></span></div>`;
+  document.getElementById('mdAdmin').style.display='flex';
+  try{
+    const ref=window.fbDoc(window.fbDb,'admin','analytics');
+    const snap=await window.fbGetDoc(ref);
+    if(!snap.exists()||!snap.data().users){
+      document.getElementById('adminContent').innerHTML='<div class="mu" style="text-align:center;padding:24px">Sin datos de usuarios aún.</div>';
+      return;
+    }
+    const users=Object.values(snap.data().users).sort((a,b)=>(b.sessionCount||0)-(a.sessionCount||0));
+    renderAdminContent(users);
+  }catch(e){
+    document.getElementById('adminContent').innerHTML=`<div style="color:var(--red);padding:16px">Error cargando datos: ${e.message}</div>`;
+  }
+}
+
+function renderAdminContent(users){
+  const totalUsers=users.length;
+  const totalSessions=users.reduce((a,u)=>a+(u.sessionCount||0),0);
+  const activeThisWeek=users.filter(u=>{
+    if(!u.lastSeen)return false;
+    const diff=(Date.now()-new Date(u.lastSeen).getTime())/(1000*60*60*24);
+    return diff<=7;
+  }).length;
+
+  let html=`
+    <div class="admin-stats">
+      <div class="admin-stat"><div class="admin-stat-val">${totalUsers}</div><div class="admin-stat-lbl">Usuarios</div></div>
+      <div class="admin-stat"><div class="admin-stat-val">${totalSessions}</div><div class="admin-stat-lbl">Sesiones</div></div>
+      <div class="admin-stat"><div class="admin-stat-val">${activeThisWeek}</div><div class="admin-stat-lbl">Activos 7d</div></div>
+    </div>
+    <div style="font-size:13px;font-weight:600;margin-bottom:10px;color:var(--text2);text-transform:uppercase;letter-spacing:.05em">Usuarios registrados</div>`;
+
+  users.forEach(u=>{
+    const last=u.lastSeen?new Date(u.lastSeen).toLocaleDateString():'—';
+    const first=u.firstSeen?new Date(u.firstSeen).toLocaleDateString():'—';
+    html+=`
+      <div class="admin-user-card">
+        <div class="admin-user-header">
+          <div class="admin-user-avatar">${(u.email||'?')[0].toUpperCase()}</div>
+          <div style="flex:1;min-width:0">
+            <div style="font-size:13px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${u.email||'—'}</div>
+            <div style="font-size:11px;color:var(--text2);margin-top:2px">
+              ${u.sessionCount||0} sesiones · Registro: ${first}
+            </div>
+          </div>
+        </div>
+        <div class="admin-user-meta">
+          <span class="admin-meta-item"><i class="ti ti-clock"></i> Último acceso: ${last}</span>
+          <span class="admin-meta-item"><i class="ti ti-refresh"></i> ${u.sessionCount||0} accesos</span>
+        </div>
+        <div class="flex-row" style="gap:8px;margin-top:10px">
+          <button class="btn btnsm" style="flex:1;font-size:12px" onclick="adminSendPasswordReset('${u.email}')">
+            <i class="ti ti-mail"></i> Reset contraseña
+          </button>
+          <button class="btn btnsm btnd" style="font-size:12px" onclick="adminDeleteUser('${u.uid}','${u.email}')">
+            <i class="ti ti-user-x"></i> Eliminar
+          </button>
+        </div>
+      </div>`;
+  });
+
+  document.getElementById('adminContent').innerHTML=html;
+}
+
+async function adminSendPasswordReset(email){
+  if(!email)return;
+  if(!confirm(`¿Enviar email de reset de contraseña a ${email}?`))return;
+  try{
+    await window.fbSendPasswordReset(window.fbAuth,email);
+    notif('✓ Email de reset enviado a '+email);
+  }catch(e){
+    alert('Error: '+e.message);
+  }
+}
+
+async function adminDeleteUser(uid,email){
+  if(!confirm(`¿Eliminar la cuenta de ${email}?\n\nSus datos en Firestore serán borrados. La cuenta de autenticación quedará inactiva hasta que Firebase la limpie automáticamente.\n\nEsta acción no se puede deshacer.`))return;
+  try{
+    // Delete user's data from Firestore
+    const userDataRef=window.fbDoc(window.fbDb,'users',uid);
+    await window.fbDeleteDoc(userDataRef);
+    // Remove from analytics
+    const analyticsRef=window.fbDoc(window.fbDb,'admin','analytics');
+    const snap=await window.fbGetDoc(analyticsRef);
+    if(snap.exists()){
+      const data=snap.data();
+      delete data.users[uid];
+      await window.fbSetDoc(analyticsRef,data);
+    }
+    notif('✓ Datos de '+email+' eliminados');
+    // Refresh the panel
+    showAdminPanel();
+  }catch(e){
+    alert('Error eliminando usuario: '+e.message);
+  }
+}
+
 // ─── LANGUAGE ──────────────────────────────────────────────────────────────────
 function openLanguageModal(){
   closeSettingsMenu();
@@ -1853,7 +2149,7 @@ function openResetDataModal(){
 }
 
 async function confirmResetData(){
-  db={plans:{},logs:{},weights:[]};
+  db={plans:{},logs:{},weights:[],settings:{},coachFeedback:{}};
   await lsaveNow();
   closeM('mdResetConfirm');
   renderAll();
@@ -1920,6 +2216,16 @@ function exportToExcel(){
   });
   const planSheet=XLSX.utils.json_to_sheet(planRows);
   XLSX.utils.book_append_sheet(wb,planSheet,'Rutinas Cargadas');
+
+  // Sheet 4: Coach feedback per exercise per week
+  const feedbackRows=Object.entries(db.coachFeedback||{}).map(([key,text])=>{
+    const parts=key.split('__w');
+    return{Ejercicio:parts[0]||key,Semana:parseInt(parts[1])||'',Feedback:text};
+  }).sort((a,b)=>String(a.Ejercicio).localeCompare(String(b.Ejercicio))||a.Semana-b.Semana);
+  if(feedbackRows.length){
+    const feedbackSheet=XLSX.utils.json_to_sheet(feedbackRows);
+    XLSX.utils.book_append_sheet(wb,feedbackSheet,'Feedback Coach');
+  }
 
   const fname=`PULSE_backup_${new Date().toISOString().split('T')[0]}.xlsx`;
   XLSX.writeFile(wb,fname);
@@ -2020,10 +2326,12 @@ async function startApp(){
       document.getElementById('loginPassword').value='';
       const btn=document.getElementById('loginSubmitBtn');
       btn.disabled=false;
-      btn.textContent=isRegisterMode?'Crear cuenta':'Iniciar sesión';
+      btn.textContent=isRegisterMode?t('register_title'):t('login_title');
+      // Record session for admin analytics (fire-and-forget, non-blocking)
+      recordUserSession(user).catch(()=>{});
     }else{
       currentUser=null;
-      db={plans:{},logs:{},weights:[]};
+      db={plans:{},logs:{},weights:[],settings:{},coachFeedback:{}};
       document.getElementById('appWrap').style.display='none';
       document.getElementById('loginScreen').style.display='flex';
     }
