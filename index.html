@@ -1327,44 +1327,21 @@ function detectSections(exercises, pageIdx, pageH) {
 }
 
 function assignSectionNames(groups, pageIdx) {
-  // Day structure by page index (0=Día1, 1=Día2, 2=Día3, 3=Día4)
-  const dayStructures = [
-    // Día 1: Calentamiento(3), Pecho(2), Hombro(2), Tríceps(2), Cardio(1)
-    [
-      {title:'Calentamiento', type:'warmup', muscle:'Calentamiento', count:3, isCardio:false},
-      {title:'Pecho', type:'strength', muscle:'Pecho', count:2, isCardio:false},
-      {title:'Hombro', type:'strength', muscle:'Hombro', count:2, isCardio:false},
-      {title:'Tríceps', type:'strength', muscle:'Tríceps', count:2, isCardio:false},
-      {title:'Cardio', type:'cardio', muscle:'Cardio', isCardio:true},
-    ],
-    // Día 2: Calentamiento(3), Pierna(6), Cardio(1)
-    [
-      {title:'Calentamiento', type:'warmup', muscle:'Calentamiento', count:3, isCardio:false},
-      {title:'Pierna', type:'strength', muscle:'Pierna', isCardio:false},
-      {title:'Cardio', type:'cardio', muscle:'Cardio', isCardio:true},
-    ],
-    // Día 3: Abs(3), Espalda(4), Bíceps(2), Cardio(1)
-    [
-      {title:'Abs', type:'strength', muscle:'Abs', count:3, isCardio:false},
-      {title:'Espalda', type:'strength', muscle:'Espalda', isCardio:false},
-      {title:'Bíceps', type:'strength', muscle:'Bíceps', isCardio:false},
-      {title:'Cardio', type:'cardio', muscle:'Cardio', isCardio:true},
-    ],
-    // Día 4: Calentamiento(3), Pierna(6), Cardio(1)
-    [
-      {title:'Calentamiento', type:'warmup', muscle:'Calentamiento', count:3, isCardio:false},
-      {title:'Pierna', type:'strength', muscle:'Pierna', isCardio:false},
-      {title:'Cardio', type:'cardio', muscle:'Cardio', isCardio:true},
-    ],
-  ];
+  // Instead of hardcoded day structures (which break when trainers use different
+  // layouts or different numbers of days), classify each group dynamically by
+  // analyzing the exercise names with muscle-group keywords.
+  // This works for any plan: 4-day, 5-day, 6-day, any section order.
 
-  const structure = dayStructures[pageIdx] || dayStructures[0];
   const sections = [];
 
-  // Match groups to sections
-  structure.forEach((sec, secIdx) => {
-    const group = groups[secIdx];
+  groups.forEach((group, groupIdx) => {
     if (!group || group.length === 0) return;
+
+    const names = group.map(item => (item.text || '').toLowerCase());
+    const allNames = names.join(' ');
+
+    // --- Detect section type from exercise name keywords ---
+    const sec = classifyGroupByKeywords(names, allNames, groupIdx, group);
 
     const exercises = group.map(item => ({
       name: item.text,
@@ -1375,37 +1352,125 @@ function assignSectionNames(groups, pageIdx) {
       videoId: item.videoId || null
     }));
 
-    // Fix warmup first exercise (Bike Machine / Treadmill / etc) has 2 min reps
+    // First exercise of warmup groups is always a machine/cardio (2 min)
     if (sec.type === 'warmup' && exercises.length > 0) {
       exercises[0].reps = '2 min';
     }
 
-    sections.push({
-      title: sec.title,
-      type: sec.type,
-      exercises
-    });
+    sections.push({ title: sec.title, type: sec.type, exercises });
   });
 
-  // Always add Cardio section if not already present from extracted text
+  // Always add a Cardio section if none was detected
   const hasCardio = sections.some(s => s.type === 'cardio');
   if (!hasCardio) {
-    const cardioName = (pageIdx === 0 || pageIdx === 2) ? 'HIIT (Caminadora-bicicleta, etc.)' : 'LISS (Caminadora, bici, remo, etc.)';
-    const cardioDur = (pageIdx === 0 || pageIdx === 2) ? '15 min' : '20-30 min';
+    // Infer HIIT vs LISS from whether we see "abs" or chest day vs leg day
+    const hasLegs = sections.some(s => s.muscle === 'Pierna');
+    const cardioName = hasLegs ? 'LISS (Caminadora, bici, remo, etc.)' : 'HIIT (Caminadora-bicicleta, etc.)';
+    const cardioDur = hasLegs ? '20-30 min' : '15 min';
     sections.push({
       title: 'Cardio', type: 'cardio',
-      exercises: [{name: cardioName, muscle: 'Cardio', sets: 1, reps: cardioDur, isCardio: true}]
+      exercises: [{ name: cardioName, muscle: 'Cardio', sets: 1, reps: cardioDur, isCardio: true }]
     });
   }
 
   return sections;
 }
 
+function classifyGroupByKeywords(names, allNames, groupIdx, group) {
+  // Keyword lists for each muscle group
+  const keywords = {
+    warmup: ['treadmill','bike','elliptical','stairmaster','bicycle','rowing','rower',
+              'push up','pushup','v-up','v ups','crunch','sit up','situp','mountain climber',
+              'good morning','bird dog','plank','side plank','dynamic','x man','xman',
+              'pallof','cable crunch','standing cable','bulgarian split squat','bw bulgarian',
+              'reverse crunch','plank march','side plank rotation'],
+    pecho:  ['bench press','chest press','chest fly','fly','flye','crossover','cable cross',
+              'pec deck','dumbbell press','incline press','decline press','push up','dip',
+              'cable fly','pullover chest','low cable crossover','incline dumbbell fly',
+              'high cable chest','dumbbell incline chest'],
+    espalda:['lat pulldown','pull down','pull-down','pull up','pullup','chin up','chinup',
+              'row','rows','rowing','bent over','bentover','bent-over','cable row',
+              'seated row','landmine row','t-bar','t bar','face pull','pullover',
+              'hyperextension','back extension','deadlift','unilateral','hammer row',
+              'cable pull over','seated unilateral','incline dumbbell neutral',
+              'dumbbell bentover','unilateral low row','low row'],
+    hombro: ['shoulder','lateral raise','front raise','face pull','arnold','overhead press',
+              'military press','upright row','shrug','rear delt','rear fly',
+              'cable rope front','db lateral','chest supported','frontal raise',
+              'delt fly','delt machine','rear delt fly'],
+    triceps:['tricep','triceps','skull crusher','pushdown','push down','overhead extension',
+              'dip','close grip','kickback','rope extension','bar extension','cable extension',
+              'incline skull','dual dumbbell kickback','dumbbell skull crusher',
+              'dumbbell skull','overhead tricep'],
+    biceps: ['curl','curls','bicep','biceps','hammer curl','zottman','bayesian',
+              'preacher','concentration','incline curl','spider curl','pronated ez',
+              'pronated cable','cable curl','ez bar','ez curl'],
+    pierna: ['squat','deadlift','leg press','lunge','lunges','step up','hip thrust',
+              'glute bridge','rdl','romanian','good morning','calf raise','calf raises',
+              'leg extension','leg curl','adduction','abduction','sumo','split squat',
+              'box squat','hack squat','goblet','landmine sumo','smith machine deadlift',
+              'back squat','single leg','single leg press','b-stance','b stance','rdls',
+              'hip thrust machine','dual single leg','double db sumo','standing calf'],
+    abs:    ['crunch','crunches','plank','ab ','abs ','core','v-up','v up','sit up','situp',
+              'russian twist','mountain climber','leg raise','heel touch','cable crunch',
+              'decline crunch','wheel rollout','rollout','hanging','windmill',
+              'weighted decline','side plank knee','x man'],
+    cardio: ['hiit','liss','treadmill cardio','bike cardio','rower cardio','interval',
+              'caminadora','bicicleta','cardio']
+  };
+
+  // Score each muscle group
+  const scores = {};
+  for (const [muscle, kws] of Object.entries(keywords)) {
+    scores[muscle] = 0;
+    for (const kw of kws) {
+      if (allNames.includes(kw)) scores[muscle]++;
+    }
+  }
+
+  // Warmup heuristic: first group on a page + has machine/circuit exercises
+  const isFirstGroup = groupIdx === 0;
+  const hasWarmupMachine = allNames.match(/treadmill|bike machine|elliptical|stairmaster|bike\b/);
+  const hasCircuitEx = group.length <= 4 && (allNames.includes('push up') || allNames.includes('v-up') || allNames.includes('plank') || allNames.includes('crunch') || allNames.includes('good morning') || allNames.includes('bulgarian') || allNames.includes('reverse crunch') || allNames.includes('plank march') || allNames.includes('pallof') || allNames.includes('cable crunch'));
+  if (isFirstGroup && (hasWarmupMachine || hasCircuitEx)) {
+    return { title: 'Calentamiento', type: 'warmup', muscle: 'Calentamiento', isCardio: false };
+  }
+
+  // Find highest scoring muscle group
+  let best = 'Pecho', bestScore = -1;
+  for (const [muscle, score] of Object.entries(scores)) {
+    if (muscle === 'warmup' || muscle === 'cardio') continue;
+    if (score > bestScore) { bestScore = score; best = muscle; }
+  }
+
+  // Map best to section metadata
+  const muscleMap = {
+    pecho:   { title: 'Pecho',   muscle: 'Pecho',   type: 'strength', isCardio: false },
+    espalda: { title: 'Espalda', muscle: 'Espalda', type: 'strength', isCardio: false },
+    hombro:  { title: 'Hombro',  muscle: 'Hombro',  type: 'strength', isCardio: false },
+    triceps: { title: 'Tríceps', muscle: 'Tríceps', type: 'strength', isCardio: false },
+    biceps:  { title: 'Bíceps',  muscle: 'Bíceps',  type: 'strength', isCardio: false },
+    pierna:  { title: 'Pierna',  muscle: 'Pierna',  type: 'strength', isCardio: false },
+    abs:     { title: 'Abs',     muscle: 'Abs',     type: 'strength', isCardio: false },
+    cardio:  { title: 'Cardio',  muscle: 'Cardio',  type: 'cardio',   isCardio: true  },
+  };
+
+  // Special case: combined sections like "Bíceps + Tríceps"
+  const hasBicep = scores.biceps > 0;
+  const hasTricep = scores.triceps > 0;
+  if (hasBicep && hasTricep && group.length <= 4) {
+    return { title: 'Bíceps + Tríceps', muscle: 'Bíceps', type: 'strength', isCardio: false };
+  }
+
+  return muscleMap[best] || { title: 'Fuerza', muscle: 'Pecho', type: 'strength', isCardio: false };
+}
+
 function buildDayName(sections) {
   const muscles = sections
-    .filter(s => s.type !== 'cardio')
+    .filter(s => s.type !== 'cardio' && s.type !== 'warmup')
     .map(s => s.title);
-  return muscles.join(' + ') + ' + Cardio';
+  const hasCardio = sections.some(s => s.type === 'cardio');
+  return muscles.join(' + ') + (hasCardio ? ' + Cardio' : '');
 }
 
 // ─── REVIEW WITH EDIT ─────────────────────────────────────────────────────────
