@@ -161,10 +161,14 @@ button{cursor:pointer;font-family:inherit}
 .yt-open-link{display:inline-flex;align-items:center;gap:6px;margin-top:8px;font-size:12px;color:var(--text2);text-decoration:none;font-weight:500}
 .yt-open-link:hover{color:var(--green)}
 .yt-open-link i{font-size:15px;color:#FF0000}
-/* Coach feedback */
-.coach-feedback-wrap{margin-top:10px;border-top:1px solid var(--border);padding-top:10px}
-.coach-feedback-label{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--text2);margin-bottom:6px;display:flex;align-items:center;gap:5px}
-.coach-feedback-label i{font-size:13px;color:#F59E0B}
+/* Coach feedback - collapsible */
+.coach-feedback-wrap{margin-top:8px;border-top:1px solid var(--border);padding-top:6px}
+.coach-feedback-toggle{display:flex;align-items:center;gap:6px;background:none;border:none;width:100%;text-align:left;padding:4px 0;cursor:pointer;color:var(--text2);font-size:12px;font-family:inherit}
+.coach-feedback-toggle i.ti-message-star{font-size:13px;color:#F59E0B;flex-shrink:0}
+.coach-feedback-toggle span{font-weight:600;font-size:11px;text-transform:uppercase;letter-spacing:.05em;flex-shrink:0}
+.coach-feedback-preview{flex:1;font-size:11px;color:var(--text2);font-weight:400;text-transform:none;letter-spacing:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-style:italic;min-width:0}
+.coach-feedback-chevron{font-size:13px;margin-left:auto;flex-shrink:0;transition:transform .2s}
+.coach-feedback-body{padding-top:6px}
 .coach-feedback-textarea{width:100%;font-size:13px;line-height:1.5;padding:8px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg2);color:var(--text);font-family:inherit;resize:none;min-height:62px;transition:.15s}
 .coach-feedback-textarea:focus{outline:none;border-color:#F59E0B;background:var(--bg)}
 .coach-feedback-save{margin-top:6px;padding:5px 12px;font-size:12px;font-weight:600;border-radius:6px;border:1px solid #F59E0B;background:rgba(245,158,11,.1);color:#92400E;cursor:pointer}
@@ -349,6 +353,10 @@ button{cursor:pointer;font-family:inherit}
         <button class="settings-item" onclick="openLanguageModal()">
           <i class="ti ti-language"></i> <span data-i18n="settings_language">Idioma</span>
           <span class="settings-item-suffix" id="langSuffix">Español</span>
+        </button>
+        <button class="settings-item" onclick="openUnitsModal()">
+          <i class="ti ti-ruler"></i> <span data-i18n="settings_units">Unidad de medida</span>
+          <span class="settings-item-suffix" id="unitsSuffix"></span>
         </button>
         <div class="settings-divider"></div>
         <button class="settings-item" onclick="openAdminPanel()">
@@ -644,6 +652,41 @@ button{cursor:pointer;font-family:inherit}
 </div>
 </div>
 
+<!-- MODAL: unidad de medida -->
+<div id="mdUnits" style="display:none" class="mdbg" onclick="if(event.target===this)closeM('mdUnits')">
+<div class="mdl">
+  <div class="mhdr">
+    <span style="font-size:16px;font-weight:700" data-i18n="settings_units">Unidad de medida</span>
+    <button class="xbtn" onclick="closeM('mdUnits')">×</button>
+  </div>
+  <p class="mu" style="margin-bottom:16px;font-size:13px" data-i18n="units_desc">Selecciona las unidades primarias. Los valores se guardan siempre en kg y se convierten automáticamente.</p>
+
+  <div style="font-size:13px;font-weight:600;margin-bottom:8px" data-i18n="units_exercises">Ejercicios (kg levantados)</div>
+  <div class="lang-option" id="unitsExKgOpt" onclick="setUnitPref('exercises','kg')">
+    <span class="lang-flag">⚖️</span>
+    <span class="lang-name">kg — Kilogramos</span>
+    <i class="ti ti-check lang-check" id="unitsExKgCheck"></i>
+  </div>
+  <div class="lang-option" id="unitsExLbOpt" onclick="setUnitPref('exercises','lb')" style="margin-bottom:16px">
+    <span class="lang-flag">🏋️</span>
+    <span class="lang-name">lb — Libras</span>
+    <i class="ti ti-check lang-check" id="unitsExLbCheck"></i>
+  </div>
+
+  <div style="font-size:13px;font-weight:600;margin-bottom:8px" data-i18n="units_bodyweight">Mi peso corporal</div>
+  <div class="lang-option" id="unitsBwKgOpt" onclick="setUnitPref('bodyweight','kg')">
+    <span class="lang-flag">⚖️</span>
+    <span class="lang-name">kg — Kilogramos</span>
+    <i class="ti ti-check lang-check" id="unitsBwKgCheck"></i>
+  </div>
+  <div class="lang-option" id="unitsBwLbOpt" onclick="setUnitPref('bodyweight','lb')">
+    <span class="lang-flag">🏋️</span>
+    <span class="lang-name">lb — Libras</span>
+    <i class="ti ti-check lang-check" id="unitsBwLbCheck"></i>
+  </div>
+</div>
+</div>
+
 <!-- MODAL: idioma -->
 <div id="mdLanguage" style="display:none" class="mdbg" onclick="if(event.target===this)closeM('mdLanguage')">
 <div class="mdl">
@@ -698,6 +741,10 @@ const I18N={
     settings_change_password:'Cambiar contraseña', settings_export_excel:'Exportar a Excel',
     settings_import_excel:'Importar desde Excel', settings_language:'Idioma',
     settings_profile:'Perfil',
+    settings_units:'Unidad de medida',
+    units_desc:'Selecciona las unidades primarias. Los valores se guardan siempre en kg y se convierten automáticamente.',
+    units_exercises:'Ejercicios (kg levantados)',
+    units_bodyweight:'Mi peso corporal',
     settings_reset_data:'Resetear mis datos', settings_logout:'Cerrar sesión',
     // Upload page
     upload_title:'Subir plan de entrenamiento',
@@ -840,6 +887,10 @@ const I18N={
     settings_change_password:'Change password', settings_export_excel:'Export to Excel',
     settings_import_excel:'Import from Excel', settings_language:'Language',
     settings_profile:'Profile',
+    settings_units:'Units of measure',
+    units_desc:'Select your primary units. Values are always stored in kg and converted automatically.',
+    units_exercises:'Exercises (weight lifted)',
+    units_bodyweight:'My body weight',
     settings_reset_data:'Reset my data', settings_logout:'Log out',
     upload_title:'Upload training plan',
     upload_desc:'Upload your trainer\'s PDF. The system reads exercise names directly from the file.',
@@ -1082,6 +1133,7 @@ async function init(){
   applyStaticTranslations();
   updateLanguageModalUI();
   updateProfileUI();
+  updateUnitsModalUI();
   document.getElementById('wDate').value=new Date().toISOString().split('T')[0];
   renderAll();
 }
@@ -1628,30 +1680,57 @@ function renderDay(i){
       // Completed today = logged today for this week
       const doneToday=logs.some(l=>l.date===today&&l.week===aplan.week);
       let hist='';
-      if(last&&last.sets&&last.sets.length){const disp=ex.isCardio?last.sets[0].val+' min':last.sets.map(s=>`${s.val}kg×${s.reps}`).join(' | ');const allMx=logs.map(l=>Math.max(0,...(l.sets||[]).map(s=>parseFloat(s.val)||0)));const isPR=allMx.length>1&&allMx[allMx.length-1]>=Math.max(...allMx.slice(0,-1));
-        hist=`<div style="margin-top:5px;display:flex;align-items:center;flex-wrap:wrap;gap:5px"><span style="font-size:12px;color:var(--text2)">${t('last_label')} S${last.week}: ${disp}</span>${isPR?'<span class="pr">🏆 PR</span>':''}${logs.length>1?`<span style="font-size:11px;color:var(--text2)">${logs.length} ${t('records_label')}</span>`:''}</div>`;}
+      // Show most recent coach feedback from any week as a reminder
+      const fb2=db.coachFeedback||{};
+      const latestFbRoutine=Object.keys(fb2)
+        .filter(k=>k.startsWith(ex.name+'__w'))
+        .map(k=>({week:parseInt(k.split('__w')[1]),text:fb2[k]}))
+        .filter(f=>f.text&&f.week)
+        .sort((a,b)=>b.week-a.week)[0];
+      const fbReminderHtml=latestFbRoutine?`<div style="margin-top:4px;font-size:11px;color:#92400E;background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.2);border-radius:5px;padding:4px 8px;display:flex;align-items:flex-start;gap:4px"><i class="ti ti-message-star" style="font-size:12px;color:#F59E0B;flex-shrink:0;margin-top:1px"></i><span style="flex:1;line-height:1.4">${latestFbRoutine.text.slice(0,80)}${latestFbRoutine.text.length>80?'…':''}</span><span style="flex-shrink:0;color:var(--text2);font-size:10px;margin-left:4px">S${latestFbRoutine.week}</span></div>`:'';
+      if(last&&last.sets&&last.sets.length){
+        const exUnit=getUnitEx();
+        const disp=ex.isCardio?last.sets[0].val+' min':last.sets.map(s=>{
+          const dispVal=exUnit==='lb'?kgToDisplay(parseFloat(s.val)||0,'lb'):parseFloat(s.val)||0;
+          return `${dispVal}${exUnit}×${s.reps}`;
+        }).join(' | ');
+        const allMx=logs.map(l=>Math.max(0,...(l.sets||[]).map(s=>parseFloat(s.val)||0)));
+        const isPR=allMx.length>1&&allMx[allMx.length-1]>=Math.max(...allMx.slice(0,-1));
+        hist=`<div style="margin-top:5px;display:flex;align-items:center;flex-wrap:wrap;gap:5px"><span style="font-size:12px;color:var(--text2)">${t('last_label')} S${last.week}: ${disp}</span>${isPR?'<span class="pr">🏆 PR</span>':''}${logs.length>1?`<span style="font-size:11px;color:var(--text2)">${logs.length} ${t('records_label')}</span>`:''}</div>`;
+      }
       const replaceTag=ex.replacedWith?`<span class="replaced-tag">↔ ${t('replaced_label')}: ${ex.replacedWith}</span>`:'';
-      const regBtn=sec.type!=='warmup'?`<button class="btn btnsm btnp" style="white-space:nowrap;flex-shrink:0" onclick='openLogM(${JSON.stringify(ex)},${aplan.week})'>${t('log_btn')}</button>`:'';
+      // Change 1: ALL exercises (including warmup) get a Log button
+      const regBtn=`<button class="btn btnsm btnp" style="white-space:nowrap;flex-shrink:0" onclick='openLogM(${JSON.stringify(ex)},${aplan.week})'>${t('log_btn')}</button>`;
       const vidKey=`v-${i}-${si}-${ei}`;
       const videoToggle=ex.videoId?`<button class="video-toggle-btn" onclick="toggleVideo('${vidKey}')" id="btn-${vidKey}" aria-label="Ver video del ejercicio"><i class="ti ti-chevron-down"></i></button>`:'';
       // Check circle: green with checkmark if done today, empty circle if not
       const checkCircle=`<div class="ex-check${doneToday?' done':''}"><i class="ti ti-check"></i></div>`;
-      // Coach feedback — stored per exercise+week key
+      // Change 2: Collapsible coach feedback section (collapsed by default, click header to open)
+      // Change 5: Show latest feedback inline when collapsed so user can see it at a glance
       const fbKey=`${ex.name}__w${aplan.week}`;
-      const fbText=(db.coachFeedback[fbKey]||'').replace(/"/g,'&quot;');
+      const fbDomId=`fb-${fbKey.replace(/ /g,'_')}`;
+      const fbDropId=`fbdrop-${fbKey.replace(/ /g,'_')}`;
+      const hasFeedback=!!(db.coachFeedback&&db.coachFeedback[fbKey]);
       const feedbackSection=sec.type!=='warmup'?`
-        <div class="coach-feedback-wrap">
-          <div class="coach-feedback-label"><i class="ti ti-message-star"></i>${t('coach_feedback')}</div>
-          <textarea class="coach-feedback-textarea" id="fb-${fbKey.replace(/ /g,'_')}" placeholder="${t('coach_feedback_placeholder')}">${db.coachFeedback[fbKey]||''}</textarea>
-          <button class="coach-feedback-save" onclick="saveCoachFeedback('${fbKey.replace(/'/g,"\\'")}')">
-            <i class="ti ti-device-floppy"></i> ${t('save')}
+        <div class="coach-feedback-wrap collapsed" id="${fbDropId}-wrap">
+          <button class="coach-feedback-toggle" onclick="toggleCoachFeedback('${fbDropId}')">
+            <i class="ti ti-message-star"></i>
+            <span>${t('coach_feedback')}</span>
+            ${hasFeedback?`<span class="coach-feedback-preview" id="${fbDropId}-preview">${(db.coachFeedback[fbKey]||'').slice(0,40).replace(/</g,'&lt;')}${(db.coachFeedback[fbKey]||'').length>40?'…':''}</span>`:''}
+            <i class="ti ti-chevron-down coach-feedback-chevron" id="${fbDropId}-chev"></i>
           </button>
+          <div class="coach-feedback-body" id="${fbDropId}" style="display:none">
+            <textarea class="coach-feedback-textarea" id="${fbDomId}" placeholder="${t('coach_feedback_placeholder')}">${db.coachFeedback[fbKey]||''}</textarea>
+            <button class="coach-feedback-save" onclick="saveCoachFeedback('${fbKey.replace(/'/g,"\\'")}','${fbDropId}')">
+              <i class="ti ti-device-floppy"></i> ${t('save')}
+            </button>
+          </div>
         </div>`:'';
       h+=`<div class="exrow">${checkCircle}<div style="flex:1">
         <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
           <span class="exn">${ex.name}</span><span class="bdg ${bc}">${ex.muscle}</span>${replaceTag}${videoToggle}
         </div>
-        <div class="exs">${ex.sets} ${t('sets_label')} · ${ex.reps}</div>${hist}
+        <div class="exs">${ex.sets} ${t('sets_label')} · ${ex.reps}</div>${hist}${fbReminderHtml}
         ${ex.videoId?`<div class="video-drop" id="${vidKey}" style="display:none">${buildVideoEmbed(ex.videoId,vidKey)}</div>`:''}
         ${feedbackSection}
       </div>${regBtn}</div>`;
@@ -1660,21 +1739,37 @@ function renderDay(i){
   h+='</div>';document.getElementById('wkEx').innerHTML=h;
 }
 
-function saveCoachFeedback(fbKey){
+function saveCoachFeedback(fbKey, fbDropId){
   if(!db.coachFeedback)db.coachFeedback={};
-  // The DOM id replaces spaces with underscores so we need to match that
   const domId='fb-'+fbKey.replace(/ /g,'_');
   const el=document.getElementById(domId);
   if(!el)return;
   const text=el.value.trim();
-  if(text){
-    db.coachFeedback[fbKey]=text;
-  }else{
-    // Empty text = remove the entry entirely
-    delete db.coachFeedback[fbKey];
-  }
+  if(text){db.coachFeedback[fbKey]=text;}
+  else{delete db.coachFeedback[fbKey];}
   lsave();
+  // Update the preview text shown in the collapsed state
+  if(fbDropId){
+    const prev=document.getElementById(fbDropId+'-preview');
+    if(text){
+      if(prev){prev.textContent=text.slice(0,40)+(text.length>40?'…':'');}
+      else{
+        // Insert preview if it didn't exist before
+        const toggle=document.querySelector(`#${fbDropId}-wrap .coach-feedback-toggle span:first-of-type`);
+        if(toggle){const p=document.createElement('span');p.className='coach-feedback-preview';p.id=fbDropId+'-preview';p.textContent=text.slice(0,40)+(text.length>40?'…':'');toggle.insertAdjacentElement('afterend',p);}
+      }
+    }else if(prev){prev.remove();}
+  }
   notif('✓ '+t('coach_feedback_saved'));
+}
+
+function toggleCoachFeedback(fbDropId){
+  const body=document.getElementById(fbDropId);
+  const chev=document.getElementById(fbDropId+'-chev');
+  if(!body)return;
+  const isOpen=body.style.display!=='none';
+  body.style.display=isOpen?'none':'block';
+  if(chev)chev.style.transform=isOpen?'':'rotate(180deg)';
 }
 
 function buildVideoEmbed(videoId,key){
@@ -1714,8 +1809,11 @@ function playInlineVideo(videoId,key){
 function getLogs(name){return Object.values(db.logs).filter(l=>l.exercise===name).sort((a,b)=>a.week-b.week||(a.date||'').localeCompare(b.date||''));}
 
 // ─── LOG MODAL ────────────────────────────────────────────────────────────────
+let mLogUnit='kg'; // current unit in the log modal (can differ from preference)
+
 function openLogM(ex,wk){
   mEx=ex;mWk=wk;
+  mLogUnit=ex.isCardio?'kg':getUnitEx(); // start with user's preferred unit
   document.getElementById('mlName').textContent=ex.name;
   document.getElementById('mlBadge').innerHTML=`<span class="bdg ${BM[ex.muscle]||'bca'}">${ex.muscle}</span>`;
   // Reset replace checkbox
@@ -1723,10 +1821,27 @@ function openLogM(ex,wk){
   document.getElementById('mlReplaceName').value='';
   document.getElementById('mlReplaceInputWrap').style.display='none';
   const logs=getLogs(ex.name);
-  let h=logs.length?`<div style="font-size:14px;font-weight:600;margin-bottom:6px">${t('history_previous')}</div>`+logs.slice(-4).map(l=>{const d=ex.isCardio?(l.sets||[]).map(s=>s.val+' min').join(', '):(l.sets||[]).map(s=>`${s.val}kg×${s.reps}`).join(' | ');const rep=l.replacedWith?`<span class="replaced-tag">↔ ${l.replacedWith}</span>`:'';return `<div class="hrow"><span class="wchip">S${l.week}</span><span style="flex:1">${d} ${rep}</span><span class="mu" style="font-size:12px">${l.date||''}</span></div>`;}).join('')+'<div style="height:10px"></div>'
+  const exUnit=getUnitEx();
+  let h=logs.length?`<div style="font-size:14px;font-weight:600;margin-bottom:6px">${t('history_previous')}</div>`+logs.slice(-4).map(l=>{
+    const d=ex.isCardio?(l.sets||[]).map(s=>s.val+' min').join(', '):(l.sets||[]).map(s=>{
+      const dispVal=exUnit==='lb'?kgToDisplay(parseFloat(s.val)||0,'lb'):parseFloat(s.val)||0;
+      return `${dispVal}${exUnit}×${s.reps}`;
+    }).join(' | ');
+    const rep=l.replacedWith?`<span class="replaced-tag">↔ ${l.replacedWith}</span>`:'';
+    return `<div class="hrow"><span class="wchip">S${l.week}</span><span style="flex:1">${d} ${rep}</span><span class="mu" style="font-size:12px">${l.date||''}</span></div>`;
+  }).join('')+'<div style="height:10px"></div>'
     :`<div class="mu" style="margin-bottom:12px">${t('first_time')}</div>`;
   document.getElementById('mlHist').innerHTML=h;
-  document.getElementById('mlHint').innerHTML=`<span class="mu" style="font-size:13px">${ex.isCardio?t('time_minutes'):t('weight_kg_reps')}</span>`;
+  // Unit toggle shown in hint area for non-cardio exercises
+  if(ex.isCardio){
+    document.getElementById('mlHint').innerHTML=`<span class="mu" style="font-size:13px">${t('time_minutes')}</span>`;
+  }else{
+    document.getElementById('mlHint').innerHTML=`<span class="mu" style="font-size:13px">${t('weight_kg_reps').replace('kg',mLogUnit)}</span>
+      <div class="unit-toggle" style="margin-left:auto">
+        <button type="button" class="unit-toggle-btn ${mLogUnit==='kg'?'active':''}" onclick="setLogUnit('kg')">kg</button>
+        <button type="button" class="unit-toggle-btn ${mLogUnit==='lb'?'active':''}" onclick="setLogUnit('lb')">lb</button>
+      </div>`;
+  }
   if(ex.isCardio){
     mSets=[{val:'',reps:''}];
     document.getElementById('mlSetCountWrap').style.display='none';
@@ -1737,6 +1852,21 @@ function openLogM(ex,wk){
     renderSetCountBtns(initialCount);
   }
   renderLogSets();document.getElementById('mdLog').style.display='flex';
+}
+
+function setLogUnit(unit){
+  if(unit===mLogUnit)return;
+  // Convert already-typed values to new unit
+  mSets=mSets.map(s=>({
+    val:s.val?(unit==='lb'?kgToDisplay(parseFloat(s.val),'lb'):displayToKg(parseFloat(s.val),'lb')).toFixed(1):'',
+    reps:s.reps
+  }));
+  mLogUnit=unit;
+  // Update toggle buttons
+  document.querySelectorAll('#mlHint .unit-toggle-btn').forEach(btn=>{
+    btn.classList.toggle('active',btn.textContent===unit);
+  });
+  renderLogSets();
 }
 
 function renderSetCountBtns(selected){
@@ -1762,10 +1892,19 @@ function toggleReplaceInput(){
   document.getElementById('mlReplaceInputWrap').style.display=checked?'block':'none';
   if(checked)document.getElementById('mlReplaceName').focus();
 }
-function renderLogSets(){document.getElementById('mlSets').innerHTML=mEx.isCardio?`<div class="srow"><span class="slbl">${t('time_label')}</span><input type="number" inputmode="decimal" placeholder="min" value="${mSets[0].val}" min="1" step="1" oninput="mSets[0].val=this.value"><span class="mu">min</span></div>`:mSets.map((s,i)=>`<div class="srow"><span class="slbl">Set ${i+1}</span><input type="number" inputmode="decimal" placeholder="kg" value="${s.val}" min="0" step="0.5" oninput="mSets[${i}].val=this.value" style="max-width:90px"><input type="number" inputmode="decimal" placeholder="reps" value="${s.reps}" min="1" step="1" oninput="mSets[${i}].reps=this.value" style="max-width:80px"></div>`).join('');}
+function renderLogSets(){
+  const unit=mEx&&mEx.isCardio?'':mLogUnit;
+  document.getElementById('mlSets').innerHTML=mEx.isCardio
+    ?`<div class="srow"><span class="slbl">${t('time_label')}</span><input type="number" inputmode="decimal" placeholder="min" value="${mSets[0].val}" min="1" step="1" oninput="mSets[0].val=this.value"><span class="mu">min</span></div>`
+    :mSets.map((s,i)=>`<div class="srow"><span class="slbl">Set ${i+1}</span><input type="number" inputmode="decimal" placeholder="${unit}" value="${s.val}" min="0" step="${unit==='lb'?'1':'0.5'}" oninput="mSets[${i}].val=this.value" style="max-width:90px"><input type="number" inputmode="decimal" placeholder="reps" value="${s.reps}" min="1" step="1" oninput="mSets[${i}].reps=this.value" style="max-width:80px"></div>`).join('');
+}
 function saveLog(){
   let filled=mEx.isCardio?[{val:mSets[0].val,reps:''}]:mSets.filter(s=>s.val&&s.reps);
   if(!filled[0]||!filled[0].val){alert(mEx.isCardio?t('alert_enter_minutes'):t('alert_enter_kg_reps'));return;}
+  // Convert from display unit to kg before storing (always stored in kg)
+  if(!mEx.isCardio&&mLogUnit==='lb'){
+    filled=filled.map(s=>({...s,val:String(displayToKg(parseFloat(s.val)||0,'lb'))}));
+  }
 
   const isReplaced=document.getElementById('mlReplaceCheck').checked;
   const replaceName=document.getElementById('mlReplaceName').value.trim();
@@ -1864,9 +2003,23 @@ function renderHistory(){
   if(!filtered.length){el.innerHTML=`<div style="text-align:center;padding:32px;color:var(--text2)">${t('no_exercises_yet')}<br>${t('upload_pdf_first')}</div>`;return;}
   el.innerHTML=filtered.map(e=>{
     const logs=getLogs(e.name);const bc=BM[e.muscle]||'bca';const last=logs.length?logs[logs.length-1]:null;let lastDisp='',progBadge='';
-    if(last&&last.sets&&last.sets.length){if(e.isCardio){lastDisp=last.sets[0].val+' min';}else{const mx=logs.map(l=>Math.max(0,...(l.sets||[]).map(s=>parseFloat(s.val)||0)));lastDisp=Math.max(...mx)+'kg';if(mx.length>1&&mx[0]>0){const p=Math.round((mx[mx.length-1]-mx[0])/mx[0]*100);progBadge=`<span style="font-size:12px;color:${p>=0?'#0F6E56':'#993C1D'};font-weight:600">${p>=0?'▲':'▼'}${Math.abs(p)}%</span>`;}}}
+    if(last&&last.sets&&last.sets.length){if(e.isCardio){lastDisp=last.sets[0].val+' min';}else{
+      const exUnit=getUnitEx();
+      const mx=logs.map(l=>Math.max(0,...(l.sets||[]).map(s=>parseFloat(s.val)||0)));
+      const maxKg=Math.max(...mx);
+      lastDisp=exUnit==='lb'?kgToDisplay(maxKg,'lb')+'lb':maxKg+'kg';
+      if(mx.length>1&&mx[0]>0){const p=Math.round((mx[mx.length-1]-mx[0])/mx[0]*100);progBadge=`<span style="font-size:12px;color:${p>=0?'#0F6E56':'#993C1D'};font-weight:600">${p>=0?'▲':'▼'}${Math.abs(p)}%</span>`;}
+    }}
+    // Find most recent coach feedback for this exercise across all weeks
+    const fb=db.coachFeedback||{};
+    const latestFb=Object.keys(fb)
+      .filter(k=>k.startsWith(e.name+'__w'))
+      .map(k=>({week:parseInt(k.split('__w')[1]),text:fb[k]}))
+      .filter(f=>f.text&&f.week)
+      .sort((a,b)=>b.week-a.week)[0];
+    const fbSnippet=latestFb?`<div style="margin-top:4px;font-size:11px;color:#92400E;background:rgba(245,158,11,.1);border-radius:5px;padding:3px 7px;display:flex;align-items:center;gap:4px;max-width:100%;overflow:hidden"><i class="ti ti-message-star" style="font-size:11px;color:#F59E0B;flex-shrink:0"></i><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${latestFb.text.slice(0,50)}${latestFb.text.length>50?'…':''}</span><span style="flex-shrink:0;color:var(--text2)"> S${latestFb.week}</span></div>`:'';
     return `<div class="hlist-row" onclick="openDetailM('${e.name.replace(/'/g,"\\'")}','${e.muscle}',${e.isCardio})">
-      <div style="flex:1;min-width:0"><div class="hlist-name">${e.name}</div><div class="hlist-meta"><span class="bdg ${bc}">${e.muscle}</span>${e.weeks.map(w=>`<span class="wchip">S${w}</span>`).join('')}${logs.length?`<span style="font-size:11px;color:var(--text2)">${logs.length} ${t('records_count')}</span>`:''}</div></div>
+      <div style="flex:1;min-width:0"><div class="hlist-name">${e.name}</div><div class="hlist-meta"><span class="bdg ${bc}">${e.muscle}</span>${e.weeks.map(w=>`<span class="wchip">S${w}</span>`).join('')}${logs.length?`<span style="font-size:11px;color:var(--text2)">${logs.length} ${t('records_count')}</span>`:''}</div>${fbSnippet}</div>
       <div class="hlist-right">${lastDisp?`<span style="font-size:14px;font-weight:700">${lastDisp}</span>`:`<span style="font-size:12px;color:var(--text2)">${t('no_data_label')}</span>`}${progBadge}<span style="font-size:11px;color:var(--text2)">${t('see_more')}</span></div>
     </div>`;
   }).join('');
@@ -1879,7 +2032,6 @@ function setWeightUnit(unit){
   if(unit===currentWeightUnit)return;
   const input=document.getElementById('wKg');
   const val=parseFloat(input.value);
-  // Convert the currently-typed value so the number stays meaningful when switching units
   if(!isNaN(val)){
     input.value=unit==='lb'?(val*2.20462).toFixed(1):(val/2.20462).toFixed(1);
   }
@@ -1892,23 +2044,36 @@ function setWeightUnit(unit){
 function saveWeight(){
   const raw=parseFloat(document.getElementById('wKg').value),date=document.getElementById('wDate').value,notes=document.getElementById('wNotes').value;
   if(!raw||!date){alert(t('alert_enter_date_weight'));return;}
-  // Always store in kg regardless of which unit was used for input
   const val=currentWeightUnit==='lb'?Math.round((raw/2.20462)*10)/10:raw;
   db.weights.push({val,date,notes});db.weights.sort((a,b)=>a.date.localeCompare(b.date));lsave();renderWChart();document.getElementById('wKg').value='';document.getElementById('wNotes').value='';notif('✓ '+t('n_weight_saved')+' '+val+' kg');
 }
 function renderWChart(){
+  // Sync the input toggle with the user's body weight unit preference
+  const bwUnit=getUnitBw();
+  if(bwUnit!==currentWeightUnit){
+    currentWeightUnit=bwUnit;
+    document.getElementById('unitKgBtn').classList.toggle('active',bwUnit==='kg');
+    document.getElementById('unitLbBtn').classList.toggle('active',bwUnit==='lb');
+    document.getElementById('wKg').placeholder=bwUnit==='kg'?'82.5':'182';
+  }
   if(!db.weights||!db.weights.length){document.getElementById('wChart').innerHTML=`<div style="text-align:center;padding:24px;color:var(--text2)">${t('no_records_yet')}</div>`;document.getElementById('wLog').innerHTML='';return;}
-  const ws=db.weights.slice(-8),mn=Math.min(...ws.map(w=>w.val)),mx=Math.max(...ws.map(w=>w.val)),rng=mx-mn||1;
-  const bars=ws.map(w=>{const h=Math.max(8,Math.round(((w.val-mn)/rng)*60+8));return `<div style="display:flex;flex-direction:column;align-items:center;flex:1;gap:3px"><div style="font-size:10px;color:var(--text2)">${w.val}</div><div style="width:100%;background:#9FE1CB;border-radius:4px 4px 0 0;height:${h}px"></div><div style="font-size:10px;color:var(--text2)">${w.date.slice(5)}</div></div>`;}).join('');
-  const f=db.weights[0].val,l=db.weights[db.weights.length-1].val,d=Math.round((l-f)*10)/10;
-  document.getElementById('wChart').innerHTML=`<div class="g3" style="margin-bottom:12px"><div class="met"><div class="mv">${l}kg</div><div class="mlb">${t('current_label')}</div></div><div class="met"><div class="mv">${Math.min(...db.weights.map(w=>w.val))}kg</div><div class="mlb">${t('min_label')}</div></div><div class="met"><div class="mv" style="color:${d>0?'#0F6E56':d<0?'#993C1D':'var(--text)'}">${d>0?'+':''}${d}kg</div><div class="mlb">${t('change_label')}</div></div></div><div style="display:flex;align-items:flex-end;gap:4px;height:72px">${bars}</div>`;
-  // Weight log list with edit buttons — use array index (reversed display, original index)
+  // Convert values for display
+  const dispW=w=>bwUnit==='lb'?Math.round(w*2.20462*10)/10:w;
+  const ws=db.weights.slice(-8);
+  const wsDisp=ws.map(w=>({...w,disp:dispW(w.val)}));
+  const mn=Math.min(...wsDisp.map(w=>w.disp)),mx=Math.max(...wsDisp.map(w=>w.disp)),rng=mx-mn||1;
+  const bars=wsDisp.map(w=>{const h=Math.max(8,Math.round(((w.disp-mn)/rng)*60+8));return `<div style="display:flex;flex-direction:column;align-items:center;flex:1;gap:3px"><div style="font-size:10px;color:var(--text2)">${w.disp}</div><div style="width:100%;background:#9FE1CB;border-radius:4px 4px 0 0;height:${h}px"></div><div style="font-size:10px;color:var(--text2)">${w.date.slice(5)}</div></div>`;}).join('');
+  const fDisp=dispW(db.weights[0].val),lDisp=dispW(db.weights[db.weights.length-1].val);
+  const d=Math.round((lDisp-fDisp)*10)/10;
+  const minDisp=dispW(Math.min(...db.weights.map(w=>w.val)));
+  document.getElementById('wChart').innerHTML=`<div class="g3" style="margin-bottom:12px"><div class="met"><div class="mv">${lDisp}${bwUnit}</div><div class="mlb">${t('current_label')}</div></div><div class="met"><div class="mv">${minDisp}${bwUnit}</div><div class="mlb">${t('min_label')}</div></div><div class="met"><div class="mv" style="color:${d>0?'#0F6E56':d<0?'#993C1D':'var(--text)'}">${d>0?'+':''}${d}${bwUnit}</div><div class="mlb">${t('change_label')}</div></div></div><div style="display:flex;align-items:flex-end;gap:4px;height:72px">${bars}</div>`;
   const total=db.weights.length;
   document.getElementById('wLog').innerHTML=db.weights.slice().reverse().map((w,ri)=>{
-    const originalIdx=total-1-ri; // map back to original array index
+    const originalIdx=total-1-ri;
+    const dv=dispW(w.val);
     return `<div class="hrow">
       <span style="width:8px;height:8px;border-radius:50%;background:#1D9E75;display:inline-block;flex-shrink:0"></span>
-      <span style="flex:1;font-weight:600;font-size:14px">${w.val} kg</span>
+      <span style="flex:1;font-weight:600;font-size:14px">${dv} ${bwUnit}</span>
       <span class="mu" style="font-size:13px">${w.date}</span>
       ${w.notes?`<span class="mu" style="font-size:12px;font-style:italic;max-width:90px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${w.notes}</span>`:''}
       <button class="btn btnsm" onclick="openWeightEdit(${originalIdx})" style="flex-shrink:0;margin-left:4px"><i class="ti ti-edit"></i></button>
@@ -2415,6 +2580,57 @@ function saveProfile(){
   updateProfileUI();
   closeM('mdProfile');
   notif('✓ '+(currentLang==='en'?'Profile updated':'Perfil actualizado'));
+}
+
+// ─── UNITS OF MEASURE ─────────────────────────────────────────────────────────
+// db.settings.unitExercises = 'kg' | 'lb'  (display unit for exercise weights)
+// db.settings.unitBodyWeight = 'kg' | 'lb' (display unit for body weight)
+// All values are ALWAYS stored in kg. Units only affect display and input conversion.
+
+function getUnitEx(){ return db.settings?.unitExercises||'kg'; }
+function getUnitBw(){ return db.settings?.unitBodyWeight||'kg'; }
+
+function kgToDisplay(kg, unit){ return unit==='lb' ? Math.round(kg*2.20462*10)/10 : kg; }
+function displayToKg(val, unit){ return unit==='lb' ? Math.round((val/2.20462)*100)/100 : val; }
+
+function openUnitsModal(){
+  closeSettingsMenu();
+  updateUnitsModalUI();
+  document.getElementById('mdUnits').style.display='flex';
+}
+
+function setUnitPref(type, unit){
+  db.settings=db.settings||{};
+  if(type==='exercises') db.settings.unitExercises=unit;
+  else db.settings.unitBodyWeight=unit;
+  lsave();
+  updateUnitsModalUI();
+  updateUnitsSuffix();
+  // Re-render current view so displayed values update
+  if(aplan) renderDay(aday);
+  renderWChart();
+}
+
+function updateUnitsModalUI(){
+  const exUnit=getUnitEx(), bwUnit=getUnitBw();
+  ['exKg','exLb'].forEach(id=>{
+    const opt=document.getElementById('unitsEx'+id.charAt(0).toUpperCase()+id.slice(1)+'Opt');
+    const chk=document.getElementById('unitsEx'+id.charAt(0).toUpperCase()+id.slice(1)+'Check');
+    if(opt) opt.classList.toggle('selected', id==='exKg'?exUnit==='kg':exUnit==='lb');
+    if(chk) chk.style.visibility=(id==='exKg'?exUnit==='kg':exUnit==='lb')?'visible':'hidden';
+  });
+  ['bwKg','bwLb'].forEach(id=>{
+    const opt=document.getElementById('unitsBw'+id.charAt(0).toUpperCase()+id.slice(1)+'Opt');
+    const chk=document.getElementById('unitsBw'+id.charAt(0).toUpperCase()+id.slice(1)+'Check');
+    if(opt) opt.classList.toggle('selected', id==='bwKg'?bwUnit==='kg':bwUnit==='lb');
+    if(chk) chk.style.visibility=(id==='bwKg'?bwUnit==='kg':bwUnit==='lb')?'visible':'hidden';
+  });
+  updateUnitsSuffix();
+}
+
+function updateUnitsSuffix(){
+  const s=document.getElementById('unitsSuffix');
+  if(s) s.textContent=`Ej: ${getUnitEx()} / Peso: ${getUnitBw()}`;
 }
 
 // ─── LANGUAGE ──────────────────────────────────────────────────────────────────
