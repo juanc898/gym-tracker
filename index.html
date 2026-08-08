@@ -554,7 +554,7 @@ button{cursor:pointer;font-family:inherit}
     <!-- Block 2: Real sets -->
     <div class="log-block log-block-real">
       <div class="log-block-header">
-        <div class="log-block-title"><i class="ti ti-barbell"></i> Series reales</div>
+        <div class="log-block-title"><i class="ti ti-barbell"></i> Series efectivas</div>
         <div style="display:flex;align-items:center;gap:8px">
           <div class="unit-toggle">
             <button type="button" class="unit-toggle-btn" id="realKgBtn" onclick="setBlockUnit('real','kg')">kg</button>
@@ -1966,7 +1966,7 @@ function convertSets(sets, fromUnit, toUnit){
 function renderBlockCountBtns(block, selected){
   const container=document.getElementById(block+'CountBtns');
   if(!container)return;
-  const options=[0,1,2,3,4,5,6,7,8];
+  const options=block==='approx'?[0,1,2,3,4]:[1,2,3,4,5,6,7,8];
   container.innerHTML=options.map(n=>
     `<button type="button" class="set-count-btn ${n===selected?'active':''}" onclick="setBlockCount('${block}',${n})">${n}</button>`
   ).join('');
