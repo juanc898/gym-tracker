@@ -100,12 +100,16 @@ button{cursor:pointer;font-family:inherit}
 .mhdr{font-size:16px;font-weight:600;margin-bottom:6px;display:flex;align-items:flex-start;justify-content:space-between;gap:8px}
 .xbtn{background:none;border:none;font-size:24px;cursor:pointer;color:var(--text2);line-height:1;flex-shrink:0;padding:0 0 0 8px}
 .srow{display:flex;gap:8px;align-items:center;margin-bottom:10px}.slbl{font-size:13px;color:var(--text2);min-width:46px;font-weight:500}.srow input{flex:1}
-/* Approximation set checkbox */
-.approx-check-wrap{display:flex;align-items:center;gap:4px;flex-shrink:0}
-.approx-check-wrap input[type=checkbox]{width:16px;height:16px;accent-color:var(--text2);cursor:pointer;flex-shrink:0}
-.approx-check-wrap label{font-size:10px;color:var(--text2);cursor:pointer;white-space:nowrap;font-weight:600;text-transform:uppercase;letter-spacing:.03em}
-.srow.is-approx .slbl{color:var(--text2);opacity:.6}
-.srow.is-approx input{opacity:.7}
+/* Two-block log design */
+.log-block{border:1px solid var(--border);border-radius:var(--radius-sm);padding:12px;margin-bottom:12px;background:var(--bg)}
+.log-block-approx{border-color:rgba(156,163,175,.4);background:rgba(156,163,175,.04)}
+.log-block-real{border-color:rgba(29,158,117,.35);background:rgba(29,158,117,.04)}
+.log-block-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+.log-block-title{font-size:13px;font-weight:700;display:flex;align-items:center;gap:6px;color:var(--text)}
+.log-block-approx .log-block-title{color:var(--text2)}
+.log-block-real .log-block-title{color:var(--green)}
+.log-block-title i{font-size:15px}
+.log-block-count-row{display:flex;align-items:center;gap:8px;margin-bottom:10px}
 /* Approx badge in history */
 .approx-badge{font-size:10px;background:var(--bg2);border:1px solid var(--border);border-radius:4px;padding:1px 5px;color:var(--text2);font-weight:600;vertical-align:middle;margin-left:3px}
 .hrow{font-size:13px;padding:8px 0;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px}.hrow:last-child{border-bottom:none}
@@ -520,16 +524,53 @@ button{cursor:pointer;font-family:inherit}
 
   <div id="mlHist"></div>
 
-  <div style="font-size:14px;font-weight:600;margin-bottom:8px" data-i18n="register_today">Registrar hoy</div>
-  <div id="mlHint" style="margin-bottom:10px"></div>
-
-  <!-- Set count selector -->
-  <div id="mlSetCountWrap" style="margin-bottom:12px">
-    <div class="mu" style="font-size:13px;margin-bottom:6px" data-i18n="sets_count">Número de sets</div>
-    <div class="set-count-row" id="mlSetCountBtns"></div>
+  <!-- CARDIO: single block -->
+  <div id="mlCardioBlock" style="display:none">
+    <div style="font-size:14px;font-weight:600;margin-bottom:8px" data-i18n="register_today">Registrar hoy</div>
+    <div id="mlCardioSets"></div>
   </div>
 
-  <div id="mlSets"></div>
+  <!-- STRENGTH: two separate blocks -->
+  <div id="mlStrengthBlocks" style="display:none">
+
+    <!-- Block 1: Approx sets -->
+    <div class="log-block log-block-approx">
+      <div class="log-block-header">
+        <div class="log-block-title"><i class="ti ti-target"></i> Series de aproximación</div>
+        <div style="display:flex;align-items:center;gap:8px">
+          <div class="unit-toggle">
+            <button type="button" class="unit-toggle-btn" id="approxKgBtn" onclick="setBlockUnit('approx','kg')">kg</button>
+            <button type="button" class="unit-toggle-btn" id="approxLbBtn" onclick="setBlockUnit('approx','lb')">lb</button>
+          </div>
+        </div>
+      </div>
+      <div class="log-block-count-row">
+        <span class="mu" style="font-size:12px">Series:</span>
+        <div class="set-count-row" id="approxCountBtns"></div>
+      </div>
+      <div id="approxSets"></div>
+    </div>
+
+    <!-- Block 2: Real sets -->
+    <div class="log-block log-block-real">
+      <div class="log-block-header">
+        <div class="log-block-title"><i class="ti ti-barbell"></i> Series reales</div>
+        <div style="display:flex;align-items:center;gap:8px">
+          <div class="unit-toggle">
+            <button type="button" class="unit-toggle-btn" id="realKgBtn" onclick="setBlockUnit('real','kg')">kg</button>
+            <button type="button" class="unit-toggle-btn" id="realLbBtn" onclick="setBlockUnit('real','lb')">lb</button>
+          </div>
+        </div>
+      </div>
+      <div class="log-block-count-row">
+        <span class="mu" style="font-size:12px">Series:</span>
+        <div class="set-count-row" id="realCountBtns"></div>
+      </div>
+      <div id="realSets"></div>
+    </div>
+
+  </div>
+
   <div class="flex-row" style="margin-top:16px">
     <button class="btn btnp" onclick="saveLog()" style="flex:1"><span data-i18n="save">Guardar</span> <i class="ti ti-check"></i></button>
   </div>
@@ -1822,90 +1863,139 @@ function playInlineVideo(videoId,key){
 function getLogs(name){return Object.values(db.logs).filter(l=>l.exercise===name).sort((a,b)=>a.week-b.week||(a.date||'').localeCompare(b.date||''));}
 
 // ─── LOG MODAL ────────────────────────────────────────────────────────────────
-let mLogUnit='kg'; // current unit in the log modal (can differ from preference)
+// ─── LOG MODAL: two-block (approx + real sets) ────────────────────────────────
+// Each block has its own unit, set count, and set data array.
+let mApproxSets=[];  // [{val, reps}]
+let mRealSets=[];    // [{val, reps}]
+let mApproxUnit='kg';
+let mRealUnit='kg';
 
 function openLogM(ex,wk){
   mEx=ex;mWk=wk;
-  mLogUnit=ex.isCardio?'kg':getUnitEx(); // start with user's preferred unit
+  const prefUnit=ex.isCardio?'kg':getUnitEx();
+  mApproxUnit=prefUnit;
+  mRealUnit=prefUnit;
   document.getElementById('mlName').textContent=ex.name;
   document.getElementById('mlBadge').innerHTML=`<span class="bdg ${BM[ex.muscle]||'bca'}">${ex.muscle}</span>`;
   // Reset replace checkbox
   document.getElementById('mlReplaceCheck').checked=false;
   document.getElementById('mlReplaceName').value='';
   document.getElementById('mlReplaceInputWrap').style.display='none';
+  // Previous logs
   const logs=getLogs(ex.name);
   const exUnit=getUnitEx();
-  let h=logs.length?`<div style="font-size:14px;font-weight:600;margin-bottom:6px">${t('history_previous')}</div>`+logs.slice(-4).map(l=>{
-    const d=ex.isCardio?(l.sets||[]).map(s=>s.val+' min').join(', '):(l.sets||[]).map(s=>{
-      const dispVal=exUnit==='lb'?kgToDisplay(parseFloat(s.val)||0,'lb'):parseFloat(s.val)||0;
-      return `${dispVal}${exUnit}×${s.reps}`;
-    }).join(' | ');
-    const rep=l.replacedWith?`<span class="replaced-tag">↔ ${l.replacedWith}</span>`:'';
-    return `<div class="hrow"><span class="wchip">S${l.week}</span><span style="flex:1">${d} ${rep}</span><span class="mu" style="font-size:12px">${l.date||''}</span></div>`;
-  }).join('')+'<div style="height:10px"></div>'
+  let h=logs.length
+    ?`<div style="font-size:14px;font-weight:600;margin-bottom:6px">${t('history_previous')}</div>`
+      +logs.slice(-4).map(l=>{
+        const realSets=(l.sets||[]).filter(s=>!s.approx);
+        const approxSets=(l.sets||[]).filter(s=>s.approx);
+        let parts=[];
+        if(realSets.length){
+          const d=ex.isCardio?realSets[0].val+' min':realSets.map(s=>{
+            const v=exUnit==='lb'?kgToDisplay(parseFloat(s.val)||0,'lb'):parseFloat(s.val)||0;
+            return `${v}${exUnit}×${s.reps}`;
+          }).join(' | ');
+          parts.push(d);
+        }
+        if(approxSets.length) parts.push(`<span class="approx-badge">${approxSets.length} aprox</span>`);
+        const rep=l.replacedWith?`<span class="replaced-tag">↔ ${l.replacedWith}</span>`:'';
+        return `<div class="hrow"><span class="wchip">S${l.week}</span><span style="flex:1">${parts.join(' + ')} ${rep}</span><span class="mu" style="font-size:12px">${l.date||''}</span></div>`;
+      }).join('')+'<div style="height:10px"></div>'
     :`<div class="mu" style="margin-bottom:12px">${t('first_time')}</div>`;
   document.getElementById('mlHist').innerHTML=h;
-  // Unit toggle shown in hint area for non-cardio exercises
+
   if(ex.isCardio){
-    document.getElementById('mlHint').innerHTML=`<span class="mu" style="font-size:13px">${t('time_minutes')}</span>`;
+    // Cardio: simple single block
+    mRealSets=[{val:'',reps:''}];
+    document.getElementById('mlCardioBlock').style.display='block';
+    document.getElementById('mlStrengthBlocks').style.display='none';
+    renderCardioSets();
   }else{
-    document.getElementById('mlHint').innerHTML=`<span class="mu" style="font-size:13px">${t('weight_kg_reps').replace('kg',mLogUnit)}</span>
-      <div class="unit-toggle" style="margin-left:auto">
-        <button type="button" class="unit-toggle-btn ${mLogUnit==='kg'?'active':''}" onclick="setLogUnit('kg')">kg</button>
-        <button type="button" class="unit-toggle-btn ${mLogUnit==='lb'?'active':''}" onclick="setLogUnit('lb')">lb</button>
-      </div>`;
+    // Strength: two blocks
+    const initialReal=ex.sets||3;
+    mApproxSets=Array.from({length:0},()=>({val:'',reps:''})); // start at 0 approx sets
+    mRealSets=Array.from({length:initialReal},()=>({val:'',reps:''}));
+    document.getElementById('mlCardioBlock').style.display='none';
+    document.getElementById('mlStrengthBlocks').style.display='block';
+    // Init unit toggles
+    setBlockUnitUI('approx',mApproxUnit);
+    setBlockUnitUI('real',mRealUnit);
+    // Init count buttons
+    renderBlockCountBtns('approx',0);
+    renderBlockCountBtns('real',initialReal);
+    renderBlockSets('approx');
+    renderBlockSets('real');
   }
-  if(ex.isCardio){
-    mSets=[{val:'',reps:''}];
-    document.getElementById('mlSetCountWrap').style.display='none';
-  }else{
-    const initialCount=ex.sets||3;
-    mSets=Array.from({length:initialCount},()=>({val:'',reps:'',approx:false}));
-    document.getElementById('mlSetCountWrap').style.display='block';
-    renderSetCountBtns(initialCount);
-  }
-  renderLogSets();document.getElementById('mdLog').style.display='flex';
+  document.getElementById('mdLog').style.display='flex';
 }
 
-function setLogUnit(unit){
-  if(unit===mLogUnit)return;
-  // Convert already-typed values to new unit
-  mSets=mSets.map(s=>({
-    val:s.val?(unit==='lb'?kgToDisplay(parseFloat(s.val),'lb'):displayToKg(parseFloat(s.val),'lb')).toFixed(1):'',
-    reps:s.reps,
-    approx:s.approx||false
+function renderCardioSets(){
+  document.getElementById('mlCardioSets').innerHTML=`<div class="srow"><span class="slbl">${t('time_label')}</span><input type="number" inputmode="decimal" placeholder="min" value="${mRealSets[0]?.val||''}" min="1" step="1" oninput="mRealSets[0].val=this.value"><span class="mu">min</span></div>`;
+}
+
+function setBlockUnit(block, unit){
+  if(block==='approx'){
+    if(unit===mApproxUnit)return;
+    mApproxSets=convertSets(mApproxSets, mApproxUnit, unit);
+    mApproxUnit=unit;
+    setBlockUnitUI('approx',unit);
+    renderBlockSets('approx');
+  }else{
+    if(unit===mRealUnit)return;
+    mRealSets=convertSets(mRealSets, mRealUnit, unit);
+    mRealUnit=unit;
+    setBlockUnitUI('real',unit);
+    renderBlockSets('real');
+  }
+}
+
+function setBlockUnitUI(block, unit){
+  const kg=document.getElementById(block+'KgBtn');
+  const lb=document.getElementById(block+'LbBtn');
+  if(kg) kg.classList.toggle('active',unit==='kg');
+  if(lb) lb.classList.toggle('active',unit==='lb');
+}
+
+function convertSets(sets, fromUnit, toUnit){
+  return sets.map(s=>({
+    ...s,
+    val:s.val?(toUnit==='lb'?kgToDisplay(parseFloat(s.val),'lb'):displayToKg(parseFloat(s.val),'lb')).toFixed(1):''
   }));
-  mLogUnit=unit;
-  // Update toggle buttons
-  document.querySelectorAll('#mlHint .unit-toggle-btn').forEach(btn=>{
-    btn.classList.toggle('active',btn.textContent===unit);
-  });
-  renderLogSets();
 }
 
-function renderSetCountBtns(selected){
-  const options=[1,2,3,4,5,6,7,8];
-  document.getElementById('mlSetCountBtns').innerHTML=options.map(n=>
-    `<button type="button" class="set-count-btn ${n===selected?'active':''}" onclick="setSetCount(${n})">${n}</button>`
+function renderBlockCountBtns(block, selected){
+  const container=document.getElementById(block+'CountBtns');
+  if(!container)return;
+  const options=[0,1,2,3,4,5,6,7,8];
+  container.innerHTML=options.map(n=>
+    `<button type="button" class="set-count-btn ${n===selected?'active':''}" onclick="setBlockCount('${block}',${n})">${n}</button>`
   ).join('');
 }
 
-function toggleApprox(i, checked){
-  mSets[i].approx=checked;
-  // Toggle the visual dim on the row without full re-render (avoids losing focus)
-  const row=document.getElementById('srow-'+i);
-  if(row) row.classList.toggle('is-approx', checked);
+function setBlockCount(block, n){
+  const sets=block==='approx'?mApproxSets:mRealSets;
+  const current=sets.length;
+  if(n>current){for(let i=current;i<n;i++)sets.push({val:'',reps:''});}
+  else if(n<current){sets.splice(n);}
+  renderBlockCountBtns(block,n);
+  renderBlockSets(block);
 }
 
-function setSetCount(n){
-  const current=mSets.length;
-  if(n>current){
-    for(let i=current;i<n;i++)mSets.push({val:'',reps:'',approx:false});
-  }else if(n<current){
-    mSets=mSets.slice(0,n);
+function renderBlockSets(block){
+  const sets=block==='approx'?mApproxSets:mRealSets;
+  const unit=block==='approx'?mApproxUnit:mRealUnit;
+  const container=document.getElementById(block+'Sets');
+  if(!container)return;
+  if(sets.length===0){
+    container.innerHTML=`<div class="mu" style="font-size:12px;padding:6px 0;text-align:center">Sin series — selecciona un número arriba</div>`;
+    return;
   }
-  renderSetCountBtns(n);
-  renderLogSets();
+  container.innerHTML=sets.map((s,i)=>`
+    <div class="srow">
+      <span class="slbl">Set ${i+1}</span>
+      <input type="number" inputmode="decimal" placeholder="${unit}" value="${s.val}" min="0" step="${unit==='lb'?'1':'0.5'}" oninput="${block==='approx'?'mApproxSets':'mRealSets'}[${i}].val=this.value" style="max-width:85px">
+      <input type="number" inputmode="decimal" placeholder="reps" value="${s.reps}" min="1" step="1" oninput="${block==='approx'?'mApproxSets':'mRealSets'}[${i}].reps=this.value" style="max-width:72px">
+    </div>`).join('');
 }
 
 function toggleReplaceInput(){
@@ -1913,32 +2003,25 @@ function toggleReplaceInput(){
   document.getElementById('mlReplaceInputWrap').style.display=checked?'block':'none';
   if(checked)document.getElementById('mlReplaceName').focus();
 }
-function renderLogSets(){
-  const unit=mEx&&mEx.isCardio?'':mLogUnit;
-  document.getElementById('mlSets').innerHTML=mEx.isCardio
-    ?`<div class="srow"><span class="slbl">${t('time_label')}</span><input type="number" inputmode="decimal" placeholder="min" value="${mSets[0].val}" min="1" step="1" oninput="mSets[0].val=this.value"><span class="mu">min</span></div>`
-    :mSets.map((s,i)=>`
-      <div class="srow${s.approx?' is-approx':''}" id="srow-${i}">
-        <span class="slbl">Set ${i+1}</span>
-        <input type="number" inputmode="decimal" placeholder="${unit}" value="${s.val}" min="0" step="${unit==='lb'?'1':'0.5'}" oninput="mSets[${i}].val=this.value" style="max-width:80px">
-        <input type="number" inputmode="decimal" placeholder="reps" value="${s.reps}" min="1" step="1" oninput="mSets[${i}].reps=this.value" style="max-width:68px">
-        <div class="approx-check-wrap">
-          <input type="checkbox" id="approx-${i}" ${s.approx?'checked':''} onchange="toggleApprox(${i},this.checked)">
-          <label for="approx-${i}">Aprox</label>
-        </div>
-      </div>`).join('');
-}
+
 function saveLog(){
-  // Approx sets only need a weight value (reps are optional but stored if given).
-  // Effective sets need both val and reps.
-  let filled=mEx.isCardio
-    ?[{val:mSets[0].val,reps:''}]
-    :mSets.filter(s=>s.val); // any set with a weight counts
-  if(!filled[0]||!filled[0].val){alert(mEx.isCardio?t('alert_enter_minutes'):t('alert_enter_kg_reps'));return;}
-  // Convert from display unit to kg before storing
-  if(!mEx.isCardio&&mLogUnit==='lb'){
-    filled=filled.map(s=>({...s,val:String(displayToKg(parseFloat(s.val)||0,'lb'))}));
+  // Collect real sets (require val+reps), approx sets (require val only)
+  const realFilled=mEx.isCardio
+    ?mRealSets.filter(s=>s.val)
+    :mRealSets.filter(s=>s.val&&s.reps);
+  const approxFilled=mApproxSets.filter(s=>s.val);
+
+  if(mEx.isCardio){
+    if(!realFilled[0]){alert(t('alert_enter_minutes'));return;}
+  }else{
+    if(!realFilled.length&&!approxFilled.length){alert(t('alert_enter_kg_reps'));return;}
   }
+
+  // Convert to kg for storage (always stored in kg)
+  const toKg=(sets, unit)=>sets.map(s=>({...s,val:unit==='lb'?String(Math.round(displayToKg(parseFloat(s.val)||0,'lb')*100)/100):s.val}));
+  const realStored=toKg(realFilled, mRealUnit);
+  const approxStored=toKg(approxFilled, mApproxUnit).map(s=>({...s,approx:true}));
+  const allSets=[...approxStored,...realStored];
 
   const isReplaced=document.getElementById('mlReplaceCheck').checked;
   const replaceName=document.getElementById('mlReplaceName').value.trim();
@@ -1947,27 +2030,20 @@ function saveLog(){
   const key=mEx.name+'_w'+mWk+'_'+Date.now();
   db.logs[key]={
     exercise:mEx.name,muscle:mEx.muscle,week:mWk,isCardio:mEx.isCardio,
-    date:new Date().toISOString().split('T')[0],sets:filled,
+    date:new Date().toISOString().split('T')[0],sets:allSets,
     replacedWith:isReplaced?replaceName:null
   };
 
-  // Reflect replacement in the routine itself for this week/day
   if(isReplaced&&replaceName&&aplan&&aplan.week===mWk){
-    aplan.days.forEach(day=>{
-      day.sections.forEach(sec=>{
-        sec.exercises.forEach(e=>{
-          if(e.name===mEx.name){
-            e.replacedWith=replaceName;
-          }
-        });
-      });
-    });
+    aplan.days.forEach(day=>{day.sections.forEach(sec=>{sec.exercises.forEach(e=>{if(e.name===mEx.name)e.replacedWith=replaceName;});});});
     db.plans[mWk]=aplan;
   }
 
   lsave();refreshStats();renderDay(aday);closeM('mdLog');
-  const disp=mEx.isCardio?filled[0].val+' min':filled.map(s=>`${s.val}kg×${s.reps}`).join(', ');
-  notif(isReplaced?`✓ ${t('replaced_by')} "${replaceName}": ${disp}`:'✓ '+disp);
+  const effectiveCount=realStored.length;
+  const approxCount=approxStored.length;
+  const summary=mEx.isCardio?realStored[0].val+' min':`${effectiveCount} efectivas${approxCount?` + ${approxCount} aprox`:''}`;
+  notif(isReplaced?`✓ ${t('replaced_by')} "${replaceName}": ${summary}`:'✓ '+summary);
 }
 
 // ─── EDIT MODAL ───────────────────────────────────────────────────────────────
