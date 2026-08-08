@@ -100,6 +100,14 @@ button{cursor:pointer;font-family:inherit}
 .mhdr{font-size:16px;font-weight:600;margin-bottom:6px;display:flex;align-items:flex-start;justify-content:space-between;gap:8px}
 .xbtn{background:none;border:none;font-size:24px;cursor:pointer;color:var(--text2);line-height:1;flex-shrink:0;padding:0 0 0 8px}
 .srow{display:flex;gap:8px;align-items:center;margin-bottom:10px}.slbl{font-size:13px;color:var(--text2);min-width:46px;font-weight:500}.srow input{flex:1}
+/* Approximation set checkbox */
+.approx-check-wrap{display:flex;align-items:center;gap:4px;flex-shrink:0}
+.approx-check-wrap input[type=checkbox]{width:16px;height:16px;accent-color:var(--text2);cursor:pointer;flex-shrink:0}
+.approx-check-wrap label{font-size:10px;color:var(--text2);cursor:pointer;white-space:nowrap;font-weight:600;text-transform:uppercase;letter-spacing:.03em}
+.srow.is-approx .slbl{color:var(--text2);opacity:.6}
+.srow.is-approx input{opacity:.7}
+/* Approx badge in history */
+.approx-badge{font-size:10px;background:var(--bg2);border:1px solid var(--border);border-radius:4px;padding:1px 5px;color:var(--text2);font-weight:600;vertical-align:middle;margin-left:3px}
 .hrow{font-size:13px;padding:8px 0;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px}.hrow:last-child{border-bottom:none}
 .day-tabs{display:flex;gap:6px;flex-wrap:wrap;margin-top:12px}
 .dtab{padding:7px 14px;border-radius:var(--radius-sm);font-size:13px;font-weight:500;border:1px solid var(--border);background:none;cursor:pointer;color:var(--text2)}.dtab.active{background:var(--text);color:var(--bg);border-color:transparent}
@@ -1690,12 +1698,17 @@ function renderDay(i){
       const fbReminderHtml=latestFbRoutine?`<div style="margin-top:4px;font-size:11px;color:#92400E;background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.2);border-radius:5px;padding:4px 8px;display:flex;align-items:flex-start;gap:4px"><i class="ti ti-message-star" style="font-size:12px;color:#F59E0B;flex-shrink:0;margin-top:1px"></i><span style="flex:1;line-height:1.4">${latestFbRoutine.text.slice(0,80)}${latestFbRoutine.text.length>80?'…':''}</span><span style="flex-shrink:0;color:var(--text2);font-size:10px;margin-left:4px">S${latestFbRoutine.week}</span></div>`:'';
       if(last&&last.sets&&last.sets.length){
         const exUnit=getUnitEx();
-        const disp=ex.isCardio?last.sets[0].val+' min':last.sets.map(s=>{
+        // Only show effective (non-approx) sets in the routine summary
+        const effectiveSets=(last.sets||[]).filter(s=>!s.approx&&s.reps);
+        const approxSets=(last.sets||[]).filter(s=>s.approx);
+        const setsToShow=effectiveSets.length?effectiveSets:(last.sets||[]);
+        const disp=ex.isCardio?last.sets[0].val+' min':setsToShow.map(s=>{
           const dispVal=exUnit==='lb'?kgToDisplay(parseFloat(s.val)||0,'lb'):parseFloat(s.val)||0;
           return `${dispVal}${exUnit}×${s.reps}`;
-        }).join(' | ');
-        const allMx=logs.map(l=>Math.max(0,...(l.sets||[]).map(s=>parseFloat(s.val)||0)));
-        const isPR=allMx.length>1&&allMx[allMx.length-1]>=Math.max(...allMx.slice(0,-1));
+        }).join(' | ')+(approxSets.length&&effectiveSets.length?` <span class="approx-badge">${approxSets.length} aprox</span>`:'');
+        // PR uses only effective sets
+        const allMx=logs.map(l=>Math.max(0,...(l.sets||[]).filter(s=>!s.approx).map(s=>parseFloat(s.val)||0)));
+        const isPR=allMx.length>1&&allMx[allMx.length-1]>0&&allMx[allMx.length-1]>=Math.max(...allMx.slice(0,-1));
         hist=`<div style="margin-top:5px;display:flex;align-items:center;flex-wrap:wrap;gap:5px"><span style="font-size:12px;color:var(--text2)">${t('last_label')} S${last.week}: ${disp}</span>${isPR?'<span class="pr">🏆 PR</span>':''}${logs.length>1?`<span style="font-size:11px;color:var(--text2)">${logs.length} ${t('records_label')}</span>`:''}</div>`;
       }
       const replaceTag=ex.replacedWith?`<span class="replaced-tag">↔ ${t('replaced_label')}: ${ex.replacedWith}</span>`:'';
@@ -1847,7 +1860,7 @@ function openLogM(ex,wk){
     document.getElementById('mlSetCountWrap').style.display='none';
   }else{
     const initialCount=ex.sets||3;
-    mSets=Array.from({length:initialCount},()=>({val:'',reps:''}));
+    mSets=Array.from({length:initialCount},()=>({val:'',reps:'',approx:false}));
     document.getElementById('mlSetCountWrap').style.display='block';
     renderSetCountBtns(initialCount);
   }
@@ -1859,7 +1872,8 @@ function setLogUnit(unit){
   // Convert already-typed values to new unit
   mSets=mSets.map(s=>({
     val:s.val?(unit==='lb'?kgToDisplay(parseFloat(s.val),'lb'):displayToKg(parseFloat(s.val),'lb')).toFixed(1):'',
-    reps:s.reps
+    reps:s.reps,
+    approx:s.approx||false
   }));
   mLogUnit=unit;
   // Update toggle buttons
@@ -1876,10 +1890,17 @@ function renderSetCountBtns(selected){
   ).join('');
 }
 
+function toggleApprox(i, checked){
+  mSets[i].approx=checked;
+  // Toggle the visual dim on the row without full re-render (avoids losing focus)
+  const row=document.getElementById('srow-'+i);
+  if(row) row.classList.toggle('is-approx', checked);
+}
+
 function setSetCount(n){
   const current=mSets.length;
   if(n>current){
-    for(let i=current;i<n;i++)mSets.push({val:'',reps:''});
+    for(let i=current;i<n;i++)mSets.push({val:'',reps:'',approx:false});
   }else if(n<current){
     mSets=mSets.slice(0,n);
   }
@@ -1896,12 +1917,25 @@ function renderLogSets(){
   const unit=mEx&&mEx.isCardio?'':mLogUnit;
   document.getElementById('mlSets').innerHTML=mEx.isCardio
     ?`<div class="srow"><span class="slbl">${t('time_label')}</span><input type="number" inputmode="decimal" placeholder="min" value="${mSets[0].val}" min="1" step="1" oninput="mSets[0].val=this.value"><span class="mu">min</span></div>`
-    :mSets.map((s,i)=>`<div class="srow"><span class="slbl">Set ${i+1}</span><input type="number" inputmode="decimal" placeholder="${unit}" value="${s.val}" min="0" step="${unit==='lb'?'1':'0.5'}" oninput="mSets[${i}].val=this.value" style="max-width:90px"><input type="number" inputmode="decimal" placeholder="reps" value="${s.reps}" min="1" step="1" oninput="mSets[${i}].reps=this.value" style="max-width:80px"></div>`).join('');
+    :mSets.map((s,i)=>`
+      <div class="srow${s.approx?' is-approx':''}" id="srow-${i}">
+        <span class="slbl">Set ${i+1}</span>
+        <input type="number" inputmode="decimal" placeholder="${unit}" value="${s.val}" min="0" step="${unit==='lb'?'1':'0.5'}" oninput="mSets[${i}].val=this.value" style="max-width:80px">
+        <input type="number" inputmode="decimal" placeholder="reps" value="${s.reps}" min="1" step="1" oninput="mSets[${i}].reps=this.value" style="max-width:68px">
+        <div class="approx-check-wrap">
+          <input type="checkbox" id="approx-${i}" ${s.approx?'checked':''} onchange="toggleApprox(${i},this.checked)">
+          <label for="approx-${i}">Aprox</label>
+        </div>
+      </div>`).join('');
 }
 function saveLog(){
-  let filled=mEx.isCardio?[{val:mSets[0].val,reps:''}]:mSets.filter(s=>s.val&&s.reps);
+  // Approx sets only need a weight value (reps are optional but stored if given).
+  // Effective sets need both val and reps.
+  let filled=mEx.isCardio
+    ?[{val:mSets[0].val,reps:''}]
+    :mSets.filter(s=>s.val); // any set with a weight counts
   if(!filled[0]||!filled[0].val){alert(mEx.isCardio?t('alert_enter_minutes'):t('alert_enter_kg_reps'));return;}
-  // Convert from display unit to kg before storing (always stored in kg)
+  // Convert from display unit to kg before storing
   if(!mEx.isCardio&&mLogUnit==='lb'){
     filled=filled.map(s=>({...s,val:String(displayToKg(parseFloat(s.val)||0,'lb'))}));
   }
@@ -1985,7 +2019,13 @@ function buildLogList(logs,isCardio,exerciseName){
   const recordsList=`<div style="font-size:14px;font-weight:600;margin-bottom:8px">${t('all_records')}</div>`+
     logs.slice().reverse().map(l=>{
       const key=ak.find(k=>db.logs[k]===l)||'';
-      const disp=isCardio?(l.sets||[]).map(s=>s.val+' min').join(', '):(l.sets||[]).map(s=>`${s.val}kg×${s.reps}`).join(' | ');
+      const exUnit=getUnitEx();
+      const disp=isCardio
+        ?(l.sets||[]).map(s=>s.val+' min').join(', ')
+        :(l.sets||[]).map(s=>{
+            const dispVal=exUnit==='lb'?kgToDisplay(parseFloat(s.val)||0,'lb'):parseFloat(s.val)||0;
+            return `${dispVal}${exUnit}×${s.reps||'—'}${s.approx?'<span class="approx-badge">Aprox</span>':''}`;
+          }).join(' | ');
       return `<div class="hrow"><span class="wchip">S${l.week}</span><span style="flex:1;font-size:13px">${disp}</span><span class="mu" style="font-size:12px">${l.date||''}</span><button class="btn btnsm" onclick="openEditM('${key}')" style="margin-left:4px"><i class="ti ti-edit"></i></button></div>`;
     }).join('');
 
