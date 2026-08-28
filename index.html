@@ -2764,49 +2764,68 @@ function renderAdminUserList(users, isFiltered=false){
 }
 
 async function adminRelabelUnits(fromUnit, toUnit){
-  // Relabels all stored weight values from one unit label to another
-  // WITHOUT converting the numeric value. E.g. 60 kg → 60 lb.
-  // Only affects: exercise logs (sets) and body weight entries.
-  // Does NOT touch the unit preference settings.
+  // Goal: if you entered "60" thinking it was lb but it was stored as kg,
+  // after this function the app shows "60 lb" — same number, new label.
+  //
+  // How it works:
+  // The app always stores in kg internally and multiplies by 2.20462 when
+  // displaying in lb. So to make "60" display as "60 lb", we need to store
+  // 60 / 2.20462 = 27.22 kg — then the display math gives 60 lb again.
+  //
+  // kg → lb: divide stored values by 2.20462 (so display × 2.20462 = original number)
+  // lb → kg: multiply stored values by 2.20462 (so display ÷ 1 = original number)
 
   const statusEl=document.getElementById('relabelStatus');
   if(statusEl) statusEl.textContent='Procesando...';
 
-  if(!confirm(`¿Relabelar todos los pesos de "${fromUnit}" a "${toUnit}"?\n\nEsto cambia la etiqueta de unidad SIN convertir el número.\nEj: 60 ${fromUnit} → 60 ${toUnit}\n\nEsta acción afecta TUS datos y no se puede deshacer.`)){
+  if(!confirm(`¿Relabelar todos los pesos de "${fromUnit}" a "${toUnit}"?\n\nEl número que ves NO cambiará.\nEj: si ves "60 ${fromUnit}" pasará a verse "60 ${toUnit}".\n\nEsta acción no se puede deshacer.`)){
     if(statusEl) statusEl.textContent='';
     return;
   }
 
   try{
-    let logsChanged=0;
+    // Factor to apply to stored values so the displayed number stays the same
+    // kg→lb: stored value must decrease (÷2.20462) so that ×2.20462 display = original
+    // lb→kg: stored value must increase (×2.20462) so that display without conversion = original
+    const factor = toUnit==='lb' ? (1/2.20462) : 2.20462;
+
+    let setsChanged=0;
     let weightsChanged=0;
 
-    // Relabel exercise logs
+    // Adjust all exercise log set values
     Object.values(db.logs).forEach(log=>{
-      if(log.isCardio)return; // skip cardio (minutes, not weight)
+      if(log.isCardio) return; // skip cardio (minutes, not weight)
       (log.sets||[]).forEach(s=>{
-        // The unit is implicit (stored as a number); we just update the preference
-        // but for logs that were entered in the wrong unit label we don't
-        // have a unit field — the fix is just updating the display preference.
-        logsChanged++;
+        const num=parseFloat(s.val);
+        if(!isNaN(num)&&num>0){
+          s.val=String(Math.round(num*factor*100)/100);
+          setsChanged++;
+        }
       });
     });
 
-    // What this really does: update the user's unit preference settings
-    // so all future displays use the new label. The values stay the same.
+    // Adjust body weight entries
+    (db.weights||[]).forEach(w=>{
+      const num=parseFloat(w.val);
+      if(!isNaN(num)&&num>0){
+        w.val=Math.round(num*factor*100)/100;
+        weightsChanged++;
+      }
+    });
+
+    // Update the display unit preferences to match
     db.settings=db.settings||{};
     db.settings.unitExercises=toUnit;
     db.settings.unitBodyWeight=toUnit;
-    weightsChanged=db.weights?.length||0;
 
     await lsaveNow();
 
-    // Update the UI unit toggles
+    // Refresh UI
     updateUnitsModalUI();
     if(aplan) renderDay(aday);
     renderWChart();
 
-    const msg=`✓ Unidades actualizadas a "${toUnit}". Ejercicios: ${logsChanged} sets · Peso corporal: ${weightsChanged} entradas.`;
+    const msg=`✓ Listo. ${setsChanged} sets y ${weightsChanged} pesos ahora en ${toUnit} (mismo número visible).`;
     if(statusEl) statusEl.innerHTML=`<span style="color:var(--green)">${msg}</span>`;
     notif(msg);
   }catch(e){
