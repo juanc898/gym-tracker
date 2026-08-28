@@ -1159,9 +1159,58 @@ async function lsaveNow(){
       lastName:db.settings?.lastName||''
     });
     if(indicator){indicator.innerHTML='<i class="ti ti-cloud-check"></i> Sincronizado';indicator.classList.remove('syncing');}
+    // Automatic daily backup (fire-and-forget, non-blocking)
+    maybeBackup().catch(()=>{});
   }catch(e){
     console.error('Error guardando en Firestore:',e);
     if(indicator){indicator.innerHTML='<i class="ti ti-cloud-x"></i> Error al guardar';indicator.classList.remove('syncing');}
+  }
+}
+
+// ─── AUTO BACKUP ───────────────────────────────────────────────────────────────
+// Stores one backup snapshot per day in userBackups/{uid}/snapshots/{YYYY-MM-DD}.
+// Keeps the last 30 days of backups. Completely non-blocking.
+async function maybeBackup(){
+  if(!currentUser)return;
+  const today=new Date().toISOString().split('T')[0];
+  // Only backup once per day (use localStorage as a lightweight gate)
+  const lastBackupKey=`pulse_lastbackup_${currentUser.uid}`;
+  try{
+    const last=localStorage.getItem(lastBackupKey);
+    if(last===today)return; // already backed up today
+  }catch(e){}
+  try{
+    const snapRef=window.fbDoc(window.fbDb,'userBackups',currentUser.uid,'snapshots',today);
+    await window.fbSetDoc(snapRef,{
+      data:JSON.stringify(db),
+      date:today,
+      timestamp:Date.now(),
+      email:currentUser.email
+    });
+    localStorage.setItem(lastBackupKey,today);
+    console.log('PULSE: backup automático guardado para',today);
+    // Prune old backups: delete anything older than 30 days
+    pruneOldBackups().catch(()=>{});
+  }catch(e){
+    console.warn('PULSE: error en backup automático:',e.message);
+  }
+}
+
+async function pruneOldBackups(){
+  if(!currentUser)return;
+  const cutoff=new Date();
+  cutoff.setDate(cutoff.getDate()-30);
+  const cutoffStr=cutoff.toISOString().split('T')[0];
+  try{
+    const col=window.fbCollection(window.fbDb,'userBackups',currentUser.uid,'snapshots');
+    const snaps=await window.fbGetDocs(col);
+    for(const d of snaps.docs){
+      if(d.id<cutoffStr){
+        await window.fbDeleteDoc(d.ref);
+      }
+    }
+  }catch(e){
+    console.warn('PULSE: error al limpiar backups antiguos:',e.message);
   }
 }
 
@@ -1721,7 +1770,8 @@ function refreshStats(){
 }
 function fillSel(){
   const sel=document.getElementById('wkSel'),cur=sel.value;sel.innerHTML=`<option value="">${t('week_placeholder')}</option>`;
-  Object.values(db.plans).filter(p=>p&&p.loaded).sort((a,b)=>a.week-b.week).forEach(p=>sel.innerHTML+=`<option value="${p.week}">${t('upload_week')} ${p.week}</option>`);
+  // Most recent week first (descending order)
+  Object.values(db.plans).filter(p=>p&&p.loaded).sort((a,b)=>b.week-a.week).forEach(p=>sel.innerHTML+=`<option value="${p.week}">${t('upload_week')} ${p.week}</option>`);
   if(cur)sel.value=cur;
 }
 
@@ -1738,8 +1788,11 @@ function renderDay(i){
     h+=`<div class="ssep">${sec.title}</div>`;
     sec.exercises.forEach((ex,ei)=>{
       const logs=getLogs(ex.name),last=logs.length?logs[logs.length-1]:null;const bc=BM[ex.muscle]||'bca';
-      // Completed today = logged today for this week
-      const doneToday=logs.some(l=>l.date===today&&l.week===aplan.week);
+      // Completed today = has a log entry for today in this week.
+      // Use == for week comparison to handle number/string type mismatches after JSON round-trips.
+      // Also check if logged under a replacement exercise name.
+      const doneToday=logs.some(l=>l.date===today&&l.week==aplan.week)
+        ||(ex.replacedWith?Object.values(db.logs).some(l=>l.exercise===ex.replacedWith&&l.date===today&&l.week==aplan.week):false);
       let hist='';
       // Show most recent coach feedback from any week as a reminder
       const fb2=db.coachFeedback||{};
@@ -2638,6 +2691,27 @@ function renderAdminContent(users){
       <div class="admin-stat"><div class="admin-stat-val">${totalSessions}</div><div class="admin-stat-lbl">Sesiones</div></div>
       <div class="admin-stat"><div class="admin-stat-val">${activeThisWeek}</div><div class="admin-stat-lbl">Activos 7d</div></div>
     </div>
+
+    <!-- Admin tool: unit relabeling -->
+    <div style="border:1px solid rgba(245,158,11,.4);border-radius:var(--radius-sm);padding:14px;margin-bottom:14px;background:rgba(245,158,11,.05)">
+      <div style="font-size:13px;font-weight:700;color:#92400E;margin-bottom:6px;display:flex;align-items:center;gap:6px">
+        <i class="ti ti-switch-2" style="font-size:15px"></i> Corrección de unidades (mis datos)
+      </div>
+      <div style="font-size:12px;color:var(--text2);margin-bottom:10px;line-height:1.5">
+        Corrige pesos de ejercicios ingresados en lb pero guardados como kg.<br>
+        El número que ves no cambia. El peso corporal no se toca.
+      </div>
+      <div style="display:flex;gap:8px">
+        <button class="btn btnsm" style="flex:1;font-size:12px;background:rgba(245,158,11,.15);border-color:rgba(245,158,11,.4);color:#92400E" onclick="adminRelabelUnits('kg','lb')">
+          <i class="ti ti-arrow-right"></i> Mis pesos son lb → corregir
+        </button>
+        <button class="btn btnsm" style="flex:1;font-size:12px;background:rgba(245,158,11,.15);border-color:rgba(245,158,11,.4);color:#92400E" onclick="adminRelabelUnits('lb','kg')">
+          <i class="ti ti-arrow-left"></i> Revertir corrección
+        </button>
+      </div>
+      <div id="relabelStatus" style="font-size:12px;margin-top:8px;color:var(--text2);min-height:16px"></div>
+    </div>
+
     <div style="font-size:13px;font-weight:600;margin-bottom:10px;color:var(--text2);text-transform:uppercase;letter-spacing:.05em">Usuarios registrados</div>`;
 
   document.getElementById('adminContent').innerHTML=statsHtml+'<div id="adminUserList"></div>';
@@ -2687,6 +2761,74 @@ function renderAdminUserList(users, isFiltered=false){
       </div>`;
   });
   listEl.innerHTML=html;
+}
+
+async function adminRelabelUnits(fromUnit, toUnit){
+  // Situation: user entered weights in lb (e.g. 90) but the app stored and
+  // displays them as kg. We need to adjust the stored values so that when
+  // the app applies its display conversion (×2.20462 for lb), the original
+  // number the user entered appears on screen.
+  //
+  // "My weights are lb, fix them" (kg→lb):
+  //   - Divide stored value by 2.20462 so display (×2.20462) = original number
+  //   - Example: stored 90 → adjusted to 40.82 → displayed as 40.82×2.20462 = 90 lb ✓
+  //   - Change unitExercises preference to 'lb'
+  //
+  // "Undo fix" (lb→kg):
+  //   - Multiply stored value by 2.20462 to reverse the above
+  //   - Change unitExercises preference to 'kg'
+  //
+  // Body weight is NOT touched — only exercise logs.
+
+  const statusEl=document.getElementById('relabelStatus');
+  if(statusEl) statusEl.textContent='Procesando...';
+
+  const isFixing = toUnit==='lb';
+  const confirmMsg = isFixing
+    ? `¿Corregir pesos de ejercicios?\n\nLos pesos que ingresaste en lb (ej: 90) se ajustarán para que se vean como "90 lb".\n\nNO afecta tu peso corporal.\nEsta acción no se puede deshacer fácilmente.`
+    : `¿Revertir corrección de unidades?\n\nInvierte el ajuste anterior. Útil si algo salió mal.\n\nNO afecta tu peso corporal.`;
+
+  if(!confirm(confirmMsg)){
+    if(statusEl) statusEl.textContent='';
+    return;
+  }
+
+  try{
+    // factor: divide for kg→lb, multiply for lb→kg
+    const factor = isFixing ? (1/2.20462) : 2.20462;
+    let setsChanged=0;
+
+    // Only adjust exercise logs — skip cardio and body weight
+    Object.values(db.logs).forEach(log=>{
+      if(log.isCardio) return;
+      (log.sets||[]).forEach(s=>{
+        const num=parseFloat(s.val);
+        if(!isNaN(num) && num>0){
+          s.val=String(Math.round(num*factor*100)/100);
+          setsChanged++;
+        }
+      });
+    });
+
+    // Update only the exercise unit preference — body weight unchanged
+    db.settings=db.settings||{};
+    db.settings.unitExercises=toUnit;
+    // db.settings.unitBodyWeight is intentionally NOT changed
+
+    await lsaveNow();
+
+    // Refresh exercise displays only
+    updateUnitsModalUI();
+    if(aplan) renderDay(aday);
+    renderHistory();
+
+    const msg=`✓ ${setsChanged} sets ajustados. Ahora en ${toUnit}. Peso corporal sin cambios.`;
+    if(statusEl) statusEl.innerHTML=`<span style="color:var(--green)">${msg}</span>`;
+    notif(msg);
+  }catch(e){
+    const err=`Error: ${e.message}`;
+    if(statusEl) statusEl.innerHTML=`<span style="color:var(--red)">${err}</span>`;
+  }
 }
 
 async function adminSendPasswordReset(email){
