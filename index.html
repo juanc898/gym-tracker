@@ -112,6 +112,12 @@ button{cursor:pointer;font-family:inherit}
 .log-block-count-row{display:flex;align-items:center;gap:8px;margin-bottom:10px}
 /* Approx badge in history */
 .approx-badge{font-size:10px;background:var(--bg2);border:1px solid var(--border);border-radius:4px;padding:1px 5px;color:var(--text2);font-weight:600;vertical-align:middle;margin-left:3px}
+/* Per-side weight toggle */
+.per-side-wrap{display:flex;align-items:center;gap:4px;flex-shrink:0}
+.per-side-wrap input[type=checkbox]{width:15px;height:15px;accent-color:var(--green);cursor:pointer;flex-shrink:0}
+.per-side-wrap label{font-size:10px;color:var(--text2);cursor:pointer;white-space:nowrap;font-weight:600;line-height:1.2;text-align:center}
+.per-side-wrap label small{display:block;font-weight:400;font-size:9px;opacity:.8}
+.srow.is-perside .slbl::after{content:' ×2';font-size:10px;color:var(--green);font-weight:700}
 .hrow{font-size:13px;padding:8px 0;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px}.hrow:last-child{border-bottom:none}
 .day-tabs{display:flex;gap:6px;flex-wrap:wrap;margin-top:12px}
 .dtab{padding:7px 14px;border-radius:var(--radius-sm);font-size:13px;font-weight:500;border:1px solid var(--border);background:none;cursor:pointer;color:var(--text2)}.dtab.active{background:var(--text);color:var(--bg);border-color:transparent}
@@ -174,11 +180,11 @@ button{cursor:pointer;font-family:inherit}
 .yt-open-link:hover{color:var(--green)}
 .yt-open-link i{font-size:15px;color:#FF0000}
 /* Coach feedback - collapsible */
-.coach-feedback-wrap{margin-top:8px;border-top:1px solid var(--border);padding-top:6px}
-.coach-feedback-toggle{display:flex;align-items:center;gap:6px;background:none;border:none;width:100%;text-align:left;padding:4px 0;cursor:pointer;color:var(--text2);font-size:12px;font-family:inherit}
+.coach-feedback-wrap{margin-top:8px;border-top:1px solid var(--border);padding-top:6px;min-width:0;overflow:hidden}
+.coach-feedback-toggle{display:flex;align-items:center;gap:6px;background:none;border:none;width:100%;max-width:100%;text-align:left;padding:4px 0;cursor:pointer;color:var(--text2);font-size:12px;font-family:inherit;min-width:0;overflow:hidden}
 .coach-feedback-toggle i.ti-message-star{font-size:13px;color:#F59E0B;flex-shrink:0}
-.coach-feedback-toggle span{font-weight:600;font-size:11px;text-transform:uppercase;letter-spacing:.05em;flex-shrink:0}
-.coach-feedback-preview{flex:1;font-size:11px;color:var(--text2);font-weight:400;text-transform:none;letter-spacing:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-style:italic;min-width:0}
+.coach-feedback-toggle>span:first-of-type{font-weight:600;font-size:11px;text-transform:uppercase;letter-spacing:.05em;flex-shrink:0}
+.coach-feedback-preview{flex:1;font-size:11px;color:var(--text2);font-weight:400;text-transform:none;letter-spacing:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-style:italic;min-width:0;max-width:0}
 .coach-feedback-chevron{font-size:13px;margin-left:auto;flex-shrink:0;transition:transform .2s}
 .coach-feedback-body{padding-top:6px}
 .coach-feedback-textarea{width:100%;font-size:13px;line-height:1.5;padding:8px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg2);color:var(--text);font-family:inherit;resize:none;min-height:62px;transition:.15s}
@@ -510,14 +516,20 @@ button{cursor:pointer;font-family:inherit}
   <div class="mhdr"><span id="mlName"></span><button class="xbtn" onclick="closeM('mdLog')">×</button></div>
   <div id="mlBadge" style="margin-bottom:12px"></div>
 
-  <!-- Replace exercise checkbox -->
+  <!-- Replace exercise -->
   <div class="replace-box">
     <label class="replace-label">
       <input type="checkbox" id="mlReplaceCheck" onchange="toggleReplaceInput()">
       <span data-i18n="replace_exercise">Reemplazar ejercicio</span>
     </label>
-    <div id="mlReplaceInputWrap" style="display:none;margin-top:8px">
-      <div class="mu" style="font-size:12px;margin-bottom:4px" data-i18n="replace_question">¿Qué ejercicio hiciste en su lugar?</div>
+    <div id="mlReplaceInputWrap" style="display:none;margin-top:10px">
+      <div class="mu" style="font-size:12px;margin-bottom:6px" data-i18n="replace_question">¿Qué ejercicio hiciste en su lugar?</div>
+      <!-- Dropdown from historical exercises -->
+      <select id="mlReplaceSelect" onchange="onReplaceSelectChange(this.value)" style="margin-bottom:8px">
+        <option value="">— Selecciona de historial —</option>
+      </select>
+      <!-- Manual override -->
+      <div class="mu" style="font-size:11px;margin-bottom:4px">O escribe el nombre manualmente:</div>
       <input type="text" id="mlReplaceName" placeholder="Nombre del ejercicio reemplazo" data-i18n-placeholder="replace_name_placeholder">
     </div>
   </div>
@@ -1914,7 +1926,7 @@ function openLogM(ex,wk){
     // Strength: two blocks
     const initialReal=ex.sets||3;
     mApproxSets=Array.from({length:0},()=>({val:'',reps:''})); // start at 0 approx sets
-    mRealSets=Array.from({length:initialReal},()=>({val:'',reps:''}));
+    mRealSets=Array.from({length:initialReal},()=>({val:'',reps:'',perSide:false}));
     document.getElementById('mlCardioBlock').style.display='none';
     document.getElementById('mlStrengthBlocks').style.display='block';
     // Init unit toggles
@@ -1972,10 +1984,16 @@ function renderBlockCountBtns(block, selected){
   ).join('');
 }
 
+function togglePerSide(block, i, checked){
+  if(block==='real') mRealSets[i].perSide=checked;
+  const row=document.getElementById(block+'row-'+i);
+  if(row) row.classList.toggle('is-perside', checked);
+}
+
 function setBlockCount(block, n){
   const sets=block==='approx'?mApproxSets:mRealSets;
   const current=sets.length;
-  if(n>current){for(let i=current;i<n;i++)sets.push({val:'',reps:''});}
+  if(n>current){for(let i=current;i<n;i++)sets.push({val:'',reps:'',perSide:false});}
   else if(n<current){sets.splice(n);}
   renderBlockCountBtns(block,n);
   renderBlockSets(block);
@@ -1990,18 +2008,50 @@ function renderBlockSets(block){
     container.innerHTML=`<div class="mu" style="font-size:12px;padding:6px 0;text-align:center">Sin series — selecciona un número arriba</div>`;
     return;
   }
+  const arr=block==='approx'?'mApproxSets':'mRealSets';
   container.innerHTML=sets.map((s,i)=>`
-    <div class="srow">
+    <div class="srow${s.perSide?' is-perside':''}" id="${block}row-${i}">
       <span class="slbl">Set ${i+1}</span>
-      <input type="number" inputmode="decimal" placeholder="${unit}" value="${s.val}" min="0" step="${unit==='lb'?'1':'0.5'}" oninput="${block==='approx'?'mApproxSets':'mRealSets'}[${i}].val=this.value" style="max-width:85px">
-      <input type="number" inputmode="decimal" placeholder="reps" value="${s.reps}" min="1" step="1" oninput="${block==='approx'?'mApproxSets':'mRealSets'}[${i}].reps=this.value" style="max-width:72px">
+      <input type="number" inputmode="decimal" placeholder="${unit}" value="${s.val}" min="0" step="${unit==='lb'?'1':'0.5'}" oninput="${arr}[${i}].val=this.value" style="max-width:78px">
+      <input type="number" inputmode="decimal" placeholder="reps" value="${s.reps}" min="1" step="1" oninput="${arr}[${i}].reps=this.value" style="max-width:65px">
+      ${block==='real'?`
+      <div class="per-side-wrap">
+        <input type="checkbox" id="${block}ps-${i}" ${s.perSide?'checked':''} onchange="togglePerSide('${block}',${i},this.checked)">
+        <label for="${block}ps-${i}">Por<small>lado</small></label>
+      </div>`:''}
     </div>`).join('');
 }
 
 function toggleReplaceInput(){
   const checked=document.getElementById('mlReplaceCheck').checked;
   document.getElementById('mlReplaceInputWrap').style.display=checked?'block':'none';
-  if(checked)document.getElementById('mlReplaceName').focus();
+  if(checked){
+    // Populate dropdown with all known exercises from plans + logs, excluding the current one
+    const known=new Set();
+    // From loaded plans
+    Object.values(db.plans).forEach(p=>{
+      if(!p||!p.loaded)return;
+      p.days.forEach(d=>d.sections.forEach(s=>s.exercises.forEach(e=>{
+        if(e.name&&e.name!==mEx.name) known.add(e.name);
+      })));
+    });
+    // From logs
+    Object.values(db.logs).forEach(l=>{
+      if(l.exercise&&l.exercise!==mEx.name) known.add(l.exercise);
+    });
+    const sorted=[...known].sort((a,b)=>a.localeCompare(b));
+    const sel=document.getElementById('mlReplaceSelect');
+    sel.innerHTML=`<option value="">— Selecciona de historial —</option>`
+      +sorted.map(n=>`<option value="${n.replace(/"/g,'&quot;')}">${n}</option>`).join('');
+    document.getElementById('mlReplaceName').value='';
+    document.getElementById('mlReplaceName').focus();
+  }
+}
+
+function onReplaceSelectChange(val){
+  if(val){
+    document.getElementById('mlReplaceName').value=val;
+  }
 }
 
 function saveLog(){
@@ -2019,7 +2069,7 @@ function saveLog(){
 
   // Convert to kg for storage (always stored in kg)
   const toKg=(sets, unit)=>sets.map(s=>({...s,val:unit==='lb'?String(Math.round(displayToKg(parseFloat(s.val)||0,'lb')*100)/100):s.val}));
-  const realStored=toKg(realFilled, mRealUnit);
+  const realStored=toKg(realFilled, mRealUnit); // perSide flag already in each set object
   const approxStored=toKg(approxFilled, mApproxUnit).map(s=>({...s,approx:true}));
   const allSets=[...approxStored,...realStored];
 
@@ -2027,13 +2077,31 @@ function saveLog(){
   const replaceName=document.getElementById('mlReplaceName').value.trim();
   if(isReplaced&&!replaceName){alert(t('alert_replace_name'));return;}
 
-  const key=mEx.name+'_w'+mWk+'_'+Date.now();
+  // When replacing: log is stored under the REPLACEMENT exercise name so it
+  // appears correctly in Historial for the new exercise. The original exercise
+  // stays visible in Rutina with a "reemplazado por X" tag.
+  const logExerciseName=isReplaced?replaceName:mEx.name;
+  // Try to find the muscle group of the replacement from plans/logs
+  let logMuscle=mEx.muscle;
+  if(isReplaced){
+    outer: for(const p of Object.values(db.plans)){
+      if(!p||!p.loaded)continue;
+      for(const d of p.days) for(const s of d.sections) for(const e of s.exercises){
+        if(e.name===replaceName){logMuscle=e.muscle;break outer;}
+      }
+    }
+  }
+
+  const key=logExerciseName+'_w'+mWk+'_'+Date.now();
   db.logs[key]={
-    exercise:mEx.name,muscle:mEx.muscle,week:mWk,isCardio:mEx.isCardio,
+    exercise:logExerciseName,muscle:logMuscle,week:mWk,isCardio:mEx.isCardio,
     date:new Date().toISOString().split('T')[0],sets:allSets,
+    // Store which original exercise this replaced (for display in Rutina)
+    replacedOriginal:isReplaced?mEx.name:null,
     replacedWith:isReplaced?replaceName:null
   };
 
+  // Mark the original exercise in the routine plan as replaced
   if(isReplaced&&replaceName&&aplan&&aplan.week===mWk){
     aplan.days.forEach(day=>{day.sections.forEach(sec=>{sec.exercises.forEach(e=>{if(e.name===mEx.name)e.replacedWith=replaceName;});});});
     db.plans[mWk]=aplan;
@@ -2100,7 +2168,7 @@ function buildLogList(logs,isCardio,exerciseName){
         ?(l.sets||[]).map(s=>s.val+' min').join(', ')
         :(l.sets||[]).map(s=>{
             const dispVal=exUnit==='lb'?kgToDisplay(parseFloat(s.val)||0,'lb'):parseFloat(s.val)||0;
-            return `${dispVal}${exUnit}×${s.reps||'—'}${s.approx?'<span class="approx-badge">Aprox</span>':''}`;
+            return `${dispVal}${exUnit}×${s.reps||'—'}${s.approx?'<span class="approx-badge">Aprox</span>':''}${s.perSide?'<span class="approx-badge" style="color:var(--green);border-color:var(--green)">×2 lados</span>':''}`;
           }).join(' | ');
       return `<div class="hrow"><span class="wchip">S${l.week}</span><span style="flex:1;font-size:13px">${disp}</span><span class="mu" style="font-size:12px">${l.date||''}</span><button class="btn btnsm" onclick="openEditM('${key}')" style="margin-left:4px"><i class="ti ti-edit"></i></button></div>`;
     }).join('');
