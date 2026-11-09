@@ -378,7 +378,7 @@ button{cursor:pointer;font-family:inherit}
         </button>
         <div class="settings-divider"></div>
         <button class="settings-item" onclick="openAdminPanel()">
-          <i class="ti ti-shield-lock"></i> <span>Administrador</span>
+          <i class="ti ti-shield-lock"></i> <span data-i18n="admin_title">Administrador</span>
         </button>
         <div class="settings-divider"></div>
         <button class="settings-item settings-item-danger" onclick="openResetDataModal()">
@@ -526,10 +526,10 @@ button{cursor:pointer;font-family:inherit}
       <div class="mu" style="font-size:12px;margin-bottom:6px" data-i18n="replace_question">¿Qué ejercicio hiciste en su lugar?</div>
       <!-- Dropdown from historical exercises -->
       <select id="mlReplaceSelect" onchange="onReplaceSelectChange(this.value)" style="margin-bottom:8px">
-        <option value="">— Selecciona de historial —</option>
+        <option value="" data-i18n="replace_select_placeholder">— Selecciona de historial —</option>
       </select>
       <!-- Manual override -->
-      <div class="mu" style="font-size:11px;margin-bottom:4px">O escribe el nombre manualmente:</div>
+      <div class="mu" style="font-size:11px;margin-bottom:4px" data-i18n="replace_or_type">O escribe el nombre manualmente:</div>
       <input type="text" id="mlReplaceName" placeholder="Nombre del ejercicio reemplazo" data-i18n-placeholder="replace_name_placeholder">
     </div>
   </div>
@@ -548,7 +548,7 @@ button{cursor:pointer;font-family:inherit}
     <!-- Block 1: Approx sets -->
     <div class="log-block log-block-approx">
       <div class="log-block-header">
-        <div class="log-block-title"><i class="ti ti-target"></i> Series de aproximación</div>
+        <div class="log-block-title"><i class="ti ti-target"></i> <span data-i18n="approx_sets_title">Series de aproximación</span></div>
         <div style="display:flex;align-items:center;gap:8px">
           <div class="unit-toggle">
             <button type="button" class="unit-toggle-btn" id="approxKgBtn" onclick="setBlockUnit('approx','kg')">kg</button>
@@ -557,7 +557,7 @@ button{cursor:pointer;font-family:inherit}
         </div>
       </div>
       <div class="log-block-count-row">
-        <span class="mu" style="font-size:12px">Series:</span>
+        <span class="mu" style="font-size:12px" data-i18n="sets_colon">Series:</span>
         <div class="set-count-row" id="approxCountBtns"></div>
       </div>
       <div id="approxSets"></div>
@@ -566,7 +566,7 @@ button{cursor:pointer;font-family:inherit}
     <!-- Block 2: Real sets -->
     <div class="log-block log-block-real">
       <div class="log-block-header">
-        <div class="log-block-title"><i class="ti ti-barbell"></i> Series efectivas</div>
+        <div class="log-block-title"><i class="ti ti-barbell"></i> <span data-i18n="effective_sets_title">Series efectivas</span></div>
         <div style="display:flex;align-items:center;gap:8px">
           <div class="unit-toggle">
             <button type="button" class="unit-toggle-btn" id="realKgBtn" onclick="setBlockUnit('real','kg')">kg</button>
@@ -575,7 +575,7 @@ button{cursor:pointer;font-family:inherit}
         </div>
       </div>
       <div class="log-block-count-row">
-        <span class="mu" style="font-size:12px">Series:</span>
+        <span class="mu" style="font-size:12px" data-i18n="sets_colon">Series:</span>
         <div class="set-count-row" id="realCountBtns"></div>
       </div>
       <div id="realSets"></div>
@@ -648,13 +648,13 @@ button{cursor:pointer;font-family:inherit}
 <div id="mdAdminKey" style="display:none" class="mdbg" onclick="if(event.target===this)closeM('mdAdminKey')">
 <div class="mdl" style="max-width:360px;margin:auto">
   <div class="mhdr">
-    <span style="font-size:16px;font-weight:700;display:flex;align-items:center;gap:8px"><i class="ti ti-shield-lock" style="color:var(--green)"></i> Administrador</span>
+    <span style="font-size:16px;font-weight:700;display:flex;align-items:center;gap:8px"><i class="ti ti-shield-lock" style="color:var(--green)"></i> <span data-i18n="admin_title">Administrador</span></span>
     <button class="xbtn" onclick="closeM('mdAdminKey')">×</button>
   </div>
-  <p class="mu" style="margin-bottom:14px;font-size:13px">Introduce la clave de administrador para acceder al panel.</p>
+  <p class="mu" style="margin-bottom:14px;font-size:13px" data-i18n="admin_key_desc">Introduce la clave de administrador para acceder al panel.</p>
   <div class="login-error" id="adminKeyError"></div>
   <input type="password" id="adminKeyInput" placeholder="••••••" style="margin-bottom:12px;font-size:18px;letter-spacing:.2em;text-align:center" onkeydown="if(event.key==='Enter')verifyAdminKey()">
-  <button class="btn btnp btn-block" id="adminKeySubmitBtn" onclick="verifyAdminKey()">Entrar</button>
+  <button class="btn btnp btn-block" id="adminKeySubmitBtn" onclick="verifyAdminKey()" data-i18n="admin_enter">Entrar</button>
 </div>
 </div>
 
@@ -662,13 +662,13 @@ button{cursor:pointer;font-family:inherit}
 <div id="mdAdmin" style="display:none" class="mdbg" onclick="if(event.target===this)closeM('mdAdmin')">
 <div class="mdl" style="max-height:92vh">
   <div class="mhdr">
-    <span style="font-size:16px;font-weight:700;display:flex;align-items:center;gap:8px"><i class="ti ti-shield-lock" style="color:var(--green)"></i> Panel de Administrador</span>
+    <span style="font-size:16px;font-weight:700;display:flex;align-items:center;gap:8px"><i class="ti ti-shield-lock" style="color:var(--green)"></i> <span data-i18n="admin_panel_title">Panel de Administrador</span></span>
     <button class="xbtn" onclick="closeM('mdAdmin')">×</button>
   </div>
   <!-- Search bar -->
   <div class="sw" style="margin:8px 0 12px">
     <i class="ti ti-search sic"></i>
-    <input type="text" id="adminSearch" placeholder="Buscar por nombre o email..." oninput="filterAdminUsers(this.value)" style="padding-left:36px">
+    <input type="text" id="adminSearch" placeholder="Buscar por nombre o email..." data-i18n-placeholder="admin_search_ph" oninput="filterAdminUsers(this.value)" style="padding-left:36px">
   </div>
   <div id="adminContent" style="margin-top:0"></div>
 </div>
@@ -725,24 +725,24 @@ button{cursor:pointer;font-family:inherit}
   <div style="font-size:13px;font-weight:600;margin-bottom:8px" data-i18n="units_exercises">Ejercicios (kg levantados)</div>
   <div class="lang-option" id="unitsExKgOpt" onclick="setUnitPref('exercises','kg')">
     <span class="lang-flag">⚖️</span>
-    <span class="lang-name">kg — Kilogramos</span>
+    <span class="lang-name" data-i18n="unit_kg_name">kg — Kilogramos</span>
     <i class="ti ti-check lang-check" id="unitsExKgCheck"></i>
   </div>
   <div class="lang-option" id="unitsExLbOpt" onclick="setUnitPref('exercises','lb')" style="margin-bottom:16px">
     <span class="lang-flag">🏋️</span>
-    <span class="lang-name">lb — Libras</span>
+    <span class="lang-name" data-i18n="unit_lb_name">lb — Libras</span>
     <i class="ti ti-check lang-check" id="unitsExLbCheck"></i>
   </div>
 
   <div style="font-size:13px;font-weight:600;margin-bottom:8px" data-i18n="units_bodyweight">Mi peso corporal</div>
   <div class="lang-option" id="unitsBwKgOpt" onclick="setUnitPref('bodyweight','kg')">
     <span class="lang-flag">⚖️</span>
-    <span class="lang-name">kg — Kilogramos</span>
+    <span class="lang-name" data-i18n="unit_kg_name">kg — Kilogramos</span>
     <i class="ti ti-check lang-check" id="unitsBwKgCheck"></i>
   </div>
   <div class="lang-option" id="unitsBwLbOpt" onclick="setUnitPref('bodyweight','lb')">
     <span class="lang-flag">🏋️</span>
-    <span class="lang-name">lb — Libras</span>
+    <span class="lang-name" data-i18n="unit_lb_name">lb — Libras</span>
     <i class="ti ti-check lang-check" id="unitsBwLbCheck"></i>
   </div>
 </div>
@@ -802,6 +802,84 @@ const I18N={
     settings_change_password:'Cambiar contraseña', settings_export_excel:'Exportar a Excel',
     settings_import_excel:'Importar desde Excel', settings_language:'Idioma',
     settings_profile:'Perfil',
+    m_pecho:'Pecho',
+    m_hombro:'Hombro',
+    m_triceps:'Tríceps',
+    m_biceps:'Bíceps',
+    m_pierna:'Pierna',
+    m_abs:'Abs',
+    m_espalda:'Espalda',
+    m_cardio:'Cardio',
+    m_calentamiento:'Calentamiento',
+    m_fuerza:'Fuerza',
+    day_word:'Día',
+    ex_hiit:'HIIT (Caminadora-bicicleta, etc.)',
+    ex_liss:'LISS (Caminadora, bici, remo, etc.)',
+    replace_select_placeholder:'— Selecciona de historial —',
+    replace_or_type:'O escribe el nombre manualmente:',
+    approx_sets_title:'Series de aproximación',
+    effective_sets_title:'Series efectivas',
+    sets_colon:'Series:',
+    no_sets_hint:'Sin series — selecciona un número arriba',
+    per_side_top:'Por',
+    per_side_bottom:'lado',
+    approx_badge:'Aprox',
+    approx_short:'aprox',
+    x2_sides:'×2 lados',
+    effective_word:'efectivas',
+    video_aria:'Ver video del ejercicio',
+    video_preview_alt:'Vista previa del video',
+    video_title:'Video del ejercicio',
+    unit_kg_name:'kg — Kilogramos',
+    unit_lb_name:'lb — Libras',
+    units_suffix_ex:'Ej',
+    units_suffix_bw:'Peso',
+    auth_invalid_email:'Correo electrónico inválido.',
+    auth_user_disabled:'Esta cuenta ha sido deshabilitada.',
+    auth_user_not_found:'No existe una cuenta con ese correo.',
+    auth_wrong_password:'Contraseña incorrecta.',
+    auth_invalid_credential:'Correo o contraseña incorrectos.',
+    auth_email_in_use:'Ya existe una cuenta con ese correo.',
+    auth_weak_password:'La contraseña debe tener al menos 6 caracteres.',
+    auth_missing_password:'Ingresa una contraseña.',
+    auth_too_many:'Demasiados intentos. Espera un momento e intenta de nuevo.',
+    auth_network:'Error de conexión. Verifica tu internet.',
+    auth_generic:'Ocurrió un error. Intenta de nuevo.',
+    admin_title:'Administrador',
+    admin_panel_title:'Panel de Administrador',
+    admin_key_desc:'Introduce la clave de administrador para acceder al panel.',
+    admin_enter:'Entrar',
+    admin_search_ph:'Buscar por nombre o email...',
+    admin_cfg_missing:'Configuración de admin no encontrada.',
+    admin_key_wrong:'Clave incorrecta.',
+    admin_key_error:'Error verificando clave: ',
+    admin_no_users:'Sin usuarios registrados aún.',
+    admin_load_error:'Error cargando datos: ',
+    admin_users:'Usuarios',
+    admin_sessions:'Sesiones',
+    admin_active7:'Activos 7d',
+    admin_units_title:'Corrección de unidades (mis datos)',
+    admin_units_desc1:'Corrige pesos de ejercicios ingresados en lb pero guardados como kg.',
+    admin_units_desc2:'El número que ves no cambia. El peso corporal no se toca.',
+    admin_units_fix:'Mis pesos son lb → corregir',
+    admin_units_revert:'Revertir corrección',
+    admin_registered:'Usuarios registrados',
+    admin_no_results:'Sin resultados para esa búsqueda.',
+    admin_no_users_short:'Sin usuarios aún.',
+    admin_no_sessions:'Sin sesiones registradas aún',
+    admin_sessions_reg:'sesiones · Registro:',
+    admin_last_access:'Último acceso:',
+    admin_accesses:'accesos',
+    admin_reset_pw:'Reset contraseña',
+    admin_delete:'Eliminar',
+    admin_confirm_fix:'¿Corregir pesos de ejercicios?\n\nLos pesos que ingresaste en lb (ej: 90) se ajustarán para que se vean como "90 lb".\n\nNO afecta tu peso corporal.\nEsta acción no se puede deshacer fácilmente.',
+    admin_confirm_revert:'¿Revertir corrección de unidades?\n\nInvierte el ajuste anterior. Útil si algo salió mal.\n\nNO afecta tu peso corporal.',
+    admin_units_done:'✓ {n} sets ajustados. Ahora en {u}. Peso corporal sin cambios.',
+    admin_reset_confirm:'¿Enviar email de reset de contraseña a {email}?',
+    admin_reset_sent:'✓ Email de reset enviado a {email}',
+    admin_delete_confirm:'¿Eliminar la cuenta de {email}?\n\nSus datos en Firestore serán borrados. La cuenta de autenticación quedará inactiva hasta que Firebase la limpie automáticamente.\n\nEsta acción no se puede deshacer.',
+    admin_deleted:'✓ Datos de {email} eliminados',
+    admin_delete_error:'Error eliminando usuario: ',
     settings_units:'Unidad de medida',
     units_desc:'Selecciona las unidades primarias. Los valores se guardan siempre en kg y se convierten automáticamente.',
     units_exercises:'Ejercicios (kg levantados)',
@@ -948,6 +1026,84 @@ const I18N={
     settings_change_password:'Change password', settings_export_excel:'Export to Excel',
     settings_import_excel:'Import from Excel', settings_language:'Language',
     settings_profile:'Profile',
+    m_pecho:'Chest',
+    m_hombro:'Shoulders',
+    m_triceps:'Triceps',
+    m_biceps:'Biceps',
+    m_pierna:'Legs',
+    m_abs:'Abs',
+    m_espalda:'Back',
+    m_cardio:'Cardio',
+    m_calentamiento:'Warm-up',
+    m_fuerza:'Strength',
+    day_word:'Day',
+    ex_hiit:'HIIT (Treadmill-bike, etc.)',
+    ex_liss:'LISS (Treadmill, bike, rower, etc.)',
+    replace_select_placeholder:'— Select from history —',
+    replace_or_type:'Or type the name manually:',
+    approx_sets_title:'Approach sets',
+    effective_sets_title:'Effective sets',
+    sets_colon:'Sets:',
+    no_sets_hint:'No sets — pick a number above',
+    per_side_top:'Per',
+    per_side_bottom:'side',
+    approx_badge:'Approach',
+    approx_short:'approach',
+    x2_sides:'×2 sides',
+    effective_word:'effective',
+    video_aria:'Watch exercise video',
+    video_preview_alt:'Video preview',
+    video_title:'Exercise video',
+    unit_kg_name:'kg — Kilograms',
+    unit_lb_name:'lb — Pounds',
+    units_suffix_ex:'Lifts',
+    units_suffix_bw:'Body',
+    auth_invalid_email:'Invalid email address.',
+    auth_user_disabled:'This account has been disabled.',
+    auth_user_not_found:'No account exists with that email.',
+    auth_wrong_password:'Incorrect password.',
+    auth_invalid_credential:'Incorrect email or password.',
+    auth_email_in_use:'An account with that email already exists.',
+    auth_weak_password:'Password must be at least 6 characters.',
+    auth_missing_password:'Enter a password.',
+    auth_too_many:'Too many attempts. Wait a moment and try again.',
+    auth_network:'Connection error. Check your internet.',
+    auth_generic:'Something went wrong. Please try again.',
+    admin_title:'Administrator',
+    admin_panel_title:'Administrator Panel',
+    admin_key_desc:'Enter the administrator key to access the panel.',
+    admin_enter:'Enter',
+    admin_search_ph:'Search by name or email...',
+    admin_cfg_missing:'Admin configuration not found.',
+    admin_key_wrong:'Incorrect key.',
+    admin_key_error:'Error verifying key: ',
+    admin_no_users:'No registered users yet.',
+    admin_load_error:'Error loading data: ',
+    admin_users:'Users',
+    admin_sessions:'Sessions',
+    admin_active7:'Active 7d',
+    admin_units_title:'Unit correction (my data)',
+    admin_units_desc1:'Fixes exercise weights entered in lb but stored as kg.',
+    admin_units_desc2:'The number you see doesn\'t change. Body weight is not touched.',
+    admin_units_fix:'My weights are lb → fix',
+    admin_units_revert:'Undo correction',
+    admin_registered:'Registered users',
+    admin_no_results:'No results for that search.',
+    admin_no_users_short:'No users yet.',
+    admin_no_sessions:'No sessions recorded yet',
+    admin_sessions_reg:'sessions · Registered:',
+    admin_last_access:'Last access:',
+    admin_accesses:'logins',
+    admin_reset_pw:'Reset password',
+    admin_delete:'Delete',
+    admin_confirm_fix:'Fix exercise weights?\n\nWeights you entered in lb (e.g. 90) will be adjusted so they display as "90 lb".\n\nDoes NOT affect your body weight.\nThis action cannot be easily undone.',
+    admin_confirm_revert:'Undo unit correction?\n\nReverses the previous adjustment. Useful if something went wrong.\n\nDoes NOT affect your body weight.',
+    admin_units_done:'✓ {n} sets adjusted. Now in {u}. Body weight unchanged.',
+    admin_reset_confirm:'Send a password reset email to {email}?',
+    admin_reset_sent:'✓ Reset email sent to {email}',
+    admin_delete_confirm:'Delete the account of {email}?\n\nTheir Firestore data will be erased. The authentication account will stay inactive until Firebase cleans it up automatically.\n\nThis action cannot be undone.',
+    admin_deleted:'✓ Data for {email} deleted',
+    admin_delete_error:'Error deleting user: ',
     settings_units:'Units of measure',
     units_desc:'Select your primary units. Values are always stored in kg and converted automatically.',
     units_exercises:'Exercises (weight lifted)',
@@ -1096,10 +1252,16 @@ async function setLanguage(lang){
   db.settings.language=lang;
   lsave();
   applyStaticTranslations();
+  refreshLoginTexts();
   renderAll();
-  // Re-render whichever sub-view is currently visible so dynamic text updates too
-  const activePage=document.querySelector('.pg.active');
-  if(activePage&&activePage.id==='pg-workout'&&aplan)renderDay(aday);
+  // Re-render the routine (tabs + day) even when it isn't the visible page, so it is
+  // already in the right language when the user switches to it.
+  if(aplan){renderTabs();renderDay(aday);}
+  if(pendingPlan){
+    document.getElementById('reviewTitle').textContent=`${t('upload_week')} ${pendingPlan.week} — ${t('review_title')}`;
+    renderReviewContent(pendingPlan);
+  }
+  updateUnitsSuffix();
   updateLanguageModalUI();
   closeM('mdLanguage');
 }
@@ -1124,6 +1286,20 @@ function applyStaticTranslations(){
 
 const BM={Pecho:'bp',Hombro:'bh','Tríceps':'bt',Pierna:'bpi',Abs:'ba',Espalda:'be','Bíceps':'bbi',Cardio:'bc',Calentamiento:'bca'};
 
+// ─── DISPLAY TRANSLATION OF STORED PLAN NAMES ──────────────────────────────────
+// Plans are parsed from the PDF and stored in Spanish (muscle groups, section titles,
+// "Día N"). The stored values stay untouched (filters, badge colors and logs depend on
+// them). These helpers only translate what is SHOWN, based on the selected language.
+const MUSCLE_KEYS={Pecho:'m_pecho',Hombro:'m_hombro','Tríceps':'m_triceps','Bíceps':'m_biceps',Pierna:'m_pierna',Abs:'m_abs',Espalda:'m_espalda',Cardio:'m_cardio',Calentamiento:'m_calentamiento',Fuerza:'m_fuerza'};
+function tMuscle(name){const k=MUSCLE_KEYS[name];return k?t(k):name;}
+// Titles/day names are muscle names joined with " + " (e.g. "Bíceps + Tríceps + Cardio")
+function tTitle(title){return title?String(title).split(' + ').map(tMuscle).join(' + '):title;}
+function tDayLabel(label){return String(label||'').replace(/^D[ií]a\b/i,t('day_word'));}
+const EX_NAME_KEYS={'HIIT (Caminadora-bicicleta, etc.)':'ex_hiit','LISS (Caminadora, bici, remo, etc.)':'ex_liss'};
+function tEx(name){const k=EX_NAME_KEYS[name];return k?t(k):name;}
+// t() with {placeholders}
+function tf(key,vars){let s=t(key);for(const k in (vars||{}))s=s.split('{'+k+'}').join(vars[k]);return s;}
+
 const KEY='gymdb_v9';
 let db={plans:{},logs:{},weights:[],settings:{},coachFeedback:{}};
 let aplan=null,aday=0,mEx=null,mWk=0,mSets=[],eKey=null,eEx=null,eSets=[],mFilter='',dChart=null;
@@ -1136,7 +1312,7 @@ let saveDebounceTimer=null;
 function lsave(){
   if(!currentUser)return;
   const indicator=document.getElementById('syncIndicator');
-  if(indicator){indicator.innerHTML='<i class="ti ti-cloud-upload"></i> Guardando...';indicator.classList.add('syncing');}
+  if(indicator){indicator.innerHTML='<i class="ti ti-cloud-upload"></i> '+t('header_saving');indicator.classList.add('syncing');}
   clearTimeout(saveDebounceTimer);
   saveDebounceTimer=setTimeout(async()=>{
     await lsaveNow();
@@ -1148,7 +1324,7 @@ function lsave(){
 async function lsaveNow(){
   if(!currentUser)return;
   const indicator=document.getElementById('syncIndicator');
-  if(indicator){indicator.innerHTML='<i class="ti ti-cloud-upload"></i> Guardando...';indicator.classList.add('syncing');}
+  if(indicator){indicator.innerHTML='<i class="ti ti-cloud-upload"></i> '+t('header_saving');indicator.classList.add('syncing');}
   try{
     const ref=window.fbDoc(window.fbDb,'users',currentUser.uid);
     await window.fbSetDoc(ref,{
@@ -1158,12 +1334,12 @@ async function lsaveNow(){
       firstName:db.settings?.firstName||'',
       lastName:db.settings?.lastName||''
     });
-    if(indicator){indicator.innerHTML='<i class="ti ti-cloud-check"></i> Sincronizado';indicator.classList.remove('syncing');}
+    if(indicator){indicator.innerHTML='<i class="ti ti-cloud-check"></i> '+t('header_synced');indicator.classList.remove('syncing');}
     // Automatic daily backup (fire-and-forget, non-blocking)
     maybeBackup().catch(()=>{});
   }catch(e){
     console.error('Error guardando en Firestore:',e);
-    if(indicator){indicator.innerHTML='<i class="ti ti-cloud-x"></i> Error al guardar';indicator.classList.remove('syncing');}
+    if(indicator){indicator.innerHTML='<i class="ti ti-cloud-x"></i> '+t('header_save_error');indicator.classList.remove('syncing');}
   }
 }
 
@@ -1647,18 +1823,18 @@ function renderReviewContent(plan) {
   let html = '';
   plan.days.forEach((day, di) => {
     html += `<div class="rev-day">
-      <div class="rev-day-title">${day.label}: ${day.name}</div>`;
+      <div class="rev-day-title">${tDayLabel(day.label)}: ${tTitle(day.name)}</div>`;
     day.sections.forEach((sec, si) => {
       html += `<div class="rev-sec">
         <div class="rev-sec-title">
-          <span>${sec.title}</span>
+          <span>${tTitle(sec.title)}</span>
           <button class="edit-btn" onclick="addExercise(${di},${si})">${t('review_add')}</button>
         </div>`;
       sec.exercises.forEach((ex, ei) => {
         const bc = BM[ex.muscle] || 'bca';
         html += `<div class="rev-ex-row" id="rex-${di}-${si}-${ei}">
-          <span class="bdg ${bc}" style="flex-shrink:0">${ex.muscle}</span>
-          <span class="rev-ex-name">${ex.name}</span>
+          <span class="bdg ${bc}" style="flex-shrink:0">${tMuscle(ex.muscle)}</span>
+          <span class="rev-ex-name">${tEx(ex.name)}</span>
           <span class="rev-ex-reps">${ex.sets}×${ex.reps}</span>
           <button class="edit-btn" onclick="editExercise(${di},${si},${ei})">✏️</button>
           <button class="edit-btn" onclick="deleteExercise(${di},${si},${ei})" style="color:var(--red)">🗑</button>
@@ -1777,15 +1953,15 @@ function fillSel(){
 
 // ─── WORKOUT ──────────────────────────────────────────────────────────────────
 function loadDays(){const wk=parseInt(document.getElementById('wkSel').value);if(!wk||!db.plans[wk]){document.getElementById('dayTabs').innerHTML='';document.getElementById('wkEx').innerHTML='';return;}aplan=db.plans[wk];aday=0;renderTabs();renderDay(0);}
-function renderTabs(){document.getElementById('dayTabs').innerHTML=aplan.days.map((d,i)=>`<button class="dtab ${i===aday?'active':''}" onclick="selDay(${i})">${d.label}</button>`).join('');}
+function renderTabs(){document.getElementById('dayTabs').innerHTML=aplan.days.map((d,i)=>`<button class="dtab ${i===aday?'active':''}" onclick="selDay(${i})">${tDayLabel(d.label)}</button>`).join('');}
 function selDay(i){aday=i;renderTabs();renderDay(i);}
 function renderDay(i){
   const day=aplan.days[i];
   const today=new Date().toISOString().split('T')[0];
   if(!db.coachFeedback)db.coachFeedback={};
-  let h=`<div class="card"><div class="mu" style="margin-bottom:12px;font-weight:600;font-size:15px">${day.name}</div>`;
+  let h=`<div class="card"><div class="mu" style="margin-bottom:12px;font-weight:600;font-size:15px">${tTitle(day.name)}</div>`;
   day.sections.forEach((sec,si)=>{
-    h+=`<div class="ssep">${sec.title}</div>`;
+    h+=`<div class="ssep">${tTitle(sec.title)}</div>`;
     sec.exercises.forEach((ex,ei)=>{
       const logs=getLogs(ex.name),last=logs.length?logs[logs.length-1]:null;const bc=BM[ex.muscle]||'bca';
       // Completed today = has a log entry for today in this week.
@@ -1811,17 +1987,17 @@ function renderDay(i){
         const disp=ex.isCardio?last.sets[0].val+' min':setsToShow.map(s=>{
           const dispVal=exUnit==='lb'?kgToDisplay(parseFloat(s.val)||0,'lb'):parseFloat(s.val)||0;
           return `${dispVal}${exUnit}×${s.reps}`;
-        }).join(' | ')+(approxSets.length&&effectiveSets.length?` <span class="approx-badge">${approxSets.length} aprox</span>`:'');
+        }).join(' | ')+(approxSets.length&&effectiveSets.length?` <span class="approx-badge">${approxSets.length} ${t('approx_short')}</span>`:'');
         // PR uses only effective sets
         const allMx=logs.map(l=>Math.max(0,...(l.sets||[]).filter(s=>!s.approx).map(s=>parseFloat(s.val)||0)));
         const isPR=allMx.length>1&&allMx[allMx.length-1]>0&&allMx[allMx.length-1]>=Math.max(...allMx.slice(0,-1));
         hist=`<div style="margin-top:5px;display:flex;align-items:center;flex-wrap:wrap;gap:5px"><span style="font-size:12px;color:var(--text2)">${t('last_label')} S${last.week}: ${disp}</span>${isPR?'<span class="pr">🏆 PR</span>':''}${logs.length>1?`<span style="font-size:11px;color:var(--text2)">${logs.length} ${t('records_label')}</span>`:''}</div>`;
       }
-      const replaceTag=ex.replacedWith?`<span class="replaced-tag">↔ ${t('replaced_label')}: ${ex.replacedWith}</span>`:'';
+      const replaceTag=ex.replacedWith?`<span class="replaced-tag">↔ ${t('replaced_label')}: ${tEx(ex.replacedWith)}</span>`:'';
       // Change 1: ALL exercises (including warmup) get a Log button
       const regBtn=`<button class="btn btnsm btnp" style="white-space:nowrap;flex-shrink:0" onclick='openLogM(${JSON.stringify(ex)},${aplan.week})'>${t('log_btn')}</button>`;
       const vidKey=`v-${i}-${si}-${ei}`;
-      const videoToggle=ex.videoId?`<button class="video-toggle-btn" onclick="toggleVideo('${vidKey}')" id="btn-${vidKey}" aria-label="Ver video del ejercicio"><i class="ti ti-chevron-down"></i></button>`:'';
+      const videoToggle=ex.videoId?`<button class="video-toggle-btn" onclick="toggleVideo('${vidKey}')" id="btn-${vidKey}" aria-label="${t('video_aria')}"><i class="ti ti-chevron-down"></i></button>`:'';
       // Check circle: green with checkmark if done today, empty circle if not
       const checkCircle=`<div class="ex-check${doneToday?' done':''}"><i class="ti ti-check"></i></div>`;
       // Change 2: Collapsible coach feedback section (collapsed by default, click header to open)
@@ -1847,7 +2023,7 @@ function renderDay(i){
         </div>`:'';
       h+=`<div class="exrow">${checkCircle}<div style="flex:1">
         <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
-          <span class="exn">${ex.name}</span><span class="bdg ${bc}">${ex.muscle}</span>${replaceTag}${videoToggle}
+          <span class="exn">${tEx(ex.name)}</span><span class="bdg ${bc}">${tMuscle(ex.muscle)}</span>${replaceTag}${videoToggle}
         </div>
         <div class="exs">${ex.sets} ${t('sets_label')} · ${ex.reps}</div>${hist}${fbReminderHtml}
         ${ex.videoId?`<div class="video-drop" id="${vidKey}" style="display:none">${buildVideoEmbed(ex.videoId,vidKey)}</div>`:''}
@@ -1894,7 +2070,7 @@ function toggleCoachFeedback(fbDropId){
 function buildVideoEmbed(videoId,key){
   return `
     <div class="yt-preview" id="thumb-${key}" onclick="playInlineVideo('${videoId}','${key}')">
-      <img src="https://img.youtube.com/vi/${videoId}/hqdefault.jpg" alt="Vista previa del video" loading="lazy">
+      <img src="https://img.youtube.com/vi/${videoId}/hqdefault.jpg" alt="${t('video_preview_alt')}" loading="lazy">
       <div class="yt-play-overlay"><i class="ti ti-player-play-filled"></i></div>
     </div>
     <a class="yt-open-link" href="https://www.youtube.com/watch?v=${videoId}" target="_blank" rel="noopener">
@@ -1921,7 +2097,7 @@ function playInlineVideo(videoId,key){
   // user taps it once, and the video plays fully without any interruption.
   const autoplay=isAndroid()?'0':'1';
   thumb.outerHTML=`<div class="yt-iframe-wrap">
-    <iframe src="https://www.youtube.com/embed/${videoId}?autoplay=${autoplay}&rel=0&playsinline=1" title="Video del ejercicio" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen loading="lazy"></iframe>
+    <iframe src="https://www.youtube.com/embed/${videoId}?autoplay=${autoplay}&rel=0&playsinline=1" title="${t('video_title')}" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen loading="lazy"></iframe>
   </div>`;
 }
 
@@ -1940,8 +2116,8 @@ function openLogM(ex,wk){
   const prefUnit=ex.isCardio?'kg':getUnitEx();
   mApproxUnit=prefUnit;
   mRealUnit=prefUnit;
-  document.getElementById('mlName').textContent=ex.name;
-  document.getElementById('mlBadge').innerHTML=`<span class="bdg ${BM[ex.muscle]||'bca'}">${ex.muscle}</span>`;
+  document.getElementById('mlName').textContent=tEx(ex.name);
+  document.getElementById('mlBadge').innerHTML=`<span class="bdg ${BM[ex.muscle]||'bca'}">${tMuscle(ex.muscle)}</span>`;
   // Reset replace checkbox
   document.getElementById('mlReplaceCheck').checked=false;
   document.getElementById('mlReplaceName').value='';
@@ -1962,8 +2138,8 @@ function openLogM(ex,wk){
           }).join(' | ');
           parts.push(d);
         }
-        if(approxSets.length) parts.push(`<span class="approx-badge">${approxSets.length} aprox</span>`);
-        const rep=l.replacedWith?`<span class="replaced-tag">↔ ${l.replacedWith}</span>`:'';
+        if(approxSets.length) parts.push(`<span class="approx-badge">${approxSets.length} ${t('approx_short')}</span>`);
+        const rep=l.replacedWith?`<span class="replaced-tag">↔ ${tEx(l.replacedWith)}</span>`:'';
         return `<div class="hrow"><span class="wchip">S${l.week}</span><span style="flex:1">${parts.join(' + ')} ${rep}</span><span class="mu" style="font-size:12px">${l.date||''}</span></div>`;
       }).join('')+'<div style="height:10px"></div>'
     :`<div class="mu" style="margin-bottom:12px">${t('first_time')}</div>`;
@@ -2058,7 +2234,7 @@ function renderBlockSets(block){
   const container=document.getElementById(block+'Sets');
   if(!container)return;
   if(sets.length===0){
-    container.innerHTML=`<div class="mu" style="font-size:12px;padding:6px 0;text-align:center">Sin series — selecciona un número arriba</div>`;
+    container.innerHTML=`<div class="mu" style="font-size:12px;padding:6px 0;text-align:center">${t('no_sets_hint')}</div>`;
     return;
   }
   const arr=block==='approx'?'mApproxSets':'mRealSets';
@@ -2070,7 +2246,7 @@ function renderBlockSets(block){
       ${block==='real'?`
       <div class="per-side-wrap">
         <input type="checkbox" id="${block}ps-${i}" ${s.perSide?'checked':''} onchange="togglePerSide('${block}',${i},this.checked)">
-        <label for="${block}ps-${i}">Por<small>lado</small></label>
+        <label for="${block}ps-${i}">${t('per_side_top')}<small>${t('per_side_bottom')}</small></label>
       </div>`:''}
     </div>`).join('');
 }
@@ -2094,8 +2270,8 @@ function toggleReplaceInput(){
     });
     const sorted=[...known].sort((a,b)=>a.localeCompare(b));
     const sel=document.getElementById('mlReplaceSelect');
-    sel.innerHTML=`<option value="">— Selecciona de historial —</option>`
-      +sorted.map(n=>`<option value="${n.replace(/"/g,'&quot;')}">${n}</option>`).join('');
+    sel.innerHTML=`<option value="">${t('replace_select_placeholder')}</option>`
+      +sorted.map(n=>`<option value="${n.replace(/"/g,'&quot;')}">${tEx(n)}</option>`).join('');
     document.getElementById('mlReplaceName').value='';
     document.getElementById('mlReplaceName').focus();
   }
@@ -2163,12 +2339,12 @@ function saveLog(){
   lsave();refreshStats();renderDay(aday);closeM('mdLog');
   const effectiveCount=realStored.length;
   const approxCount=approxStored.length;
-  const summary=mEx.isCardio?realStored[0].val+' min':`${effectiveCount} efectivas${approxCount?` + ${approxCount} aprox`:''}`;
+  const summary=mEx.isCardio?realStored[0].val+' min':`${effectiveCount} ${t('effective_word')}${approxCount?` + ${approxCount} ${t('approx_short')}`:''}`;
   notif(isReplaced?`✓ ${t('replaced_by')} "${replaceName}": ${summary}`:'✓ '+summary);
 }
 
 // ─── EDIT MODAL ───────────────────────────────────────────────────────────────
-function openEditM(key){eKey=key;eEx=db.logs[key];if(!eEx)return;eSets=JSON.parse(JSON.stringify(eEx.sets||[]));document.getElementById('meName').textContent=eEx.exercise+' — S'+eEx.week+' '+(eEx.date||'');document.getElementById('meBadge').innerHTML=`<span class="bdg ${BM[eEx.muscle]||'bca'}">${eEx.muscle}</span>`;renderEditSets();document.getElementById('mdEdit').style.display='flex';}
+function openEditM(key){eKey=key;eEx=db.logs[key];if(!eEx)return;eSets=JSON.parse(JSON.stringify(eEx.sets||[]));document.getElementById('meName').textContent=tEx(eEx.exercise)+' — S'+eEx.week+' '+(eEx.date||'');document.getElementById('meBadge').innerHTML=`<span class="bdg ${BM[eEx.muscle]||'bca'}">${tMuscle(eEx.muscle)}</span>`;renderEditSets();document.getElementById('mdEdit').style.display='flex';}
 function renderEditSets(){document.getElementById('meSets').innerHTML=eEx.isCardio?`<div class="srow"><span class="slbl">${t('time_label')}</span><input type="number" inputmode="decimal" value="${eSets[0]?.val||''}" min="1" step="1" oninput="eSets[0].val=this.value"><span class="mu">min</span></div>`:eSets.map((s,i)=>`<div class="srow"><span class="slbl">Set ${i+1}</span><input type="number" inputmode="decimal" placeholder="kg" value="${s.val}" min="0" step="0.5" oninput="eSets[${i}].val=this.value" style="max-width:90px"><input type="number" inputmode="decimal" placeholder="reps" value="${s.reps}" min="1" step="1" oninput="eSets[${i}].reps=this.value" style="max-width:80px">${eSets.length>1?`<button class="btn btnsm" onclick="rmES(${i})">×</button>`:''}</div>`).join('');}
 function rmES(i){if(eSets.length>1){eSets.splice(i,1);renderEditSets();}}
 function updateLog(){if(!eKey)return;const filled=eEx.isCardio?eSets.filter(s=>s.val):eSets.filter(s=>s.val&&s.reps);if(!filled.length){alert(t('alert_enter_valid_values'));return;}db.logs[eKey].sets=filled;lsave();refreshStats();renderHistory();renderDay(aday);closeM('mdEdit');notif(t('n_record_updated'));}
@@ -2176,7 +2352,7 @@ function deleteLog(){if(!eKey)return;delete db.logs[eKey];lsave();refreshStats()
 
 // ─── DETAIL MODAL ─────────────────────────────────────────────────────────────
 function openDetailM(name,muscle,isCardio){
-  const logs=getLogs(name);document.getElementById('mdName').textContent=name;document.getElementById('mdBadge').innerHTML=`<span class="bdg ${BM[muscle]||'bca'}">${muscle}</span>`;
+  const logs=getLogs(name);document.getElementById('mdName').textContent=tEx(name);document.getElementById('mdBadge').innerHTML=`<span class="bdg ${BM[muscle]||'bca'}">${tMuscle(muscle)}</span>`;
   if(dChart){dChart.destroy();dChart=null;}const wrap=document.getElementById('mdChartWrap');const gc=window.matchMedia('(prefers-color-scheme:dark)').matches?'rgba(255,255,255,.08)':'rgba(0,0,0,.08)';
   if(logs.length>=2&&!isCardio){wrap.style.display='block';dChart=new Chart(document.getElementById('mdCanvas'),{type:'line',data:{labels:logs.map(l=>'S'+l.week),datasets:[{data:logs.map(l=>Math.max(0,...(l.sets||[]).map(s=>parseFloat(s.val)||0))),borderColor:'#1D9E75',backgroundColor:'rgba(29,158,117,.12)',tension:.35,pointRadius:5,pointBackgroundColor:'#1D9E75',fill:true,borderWidth:2}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{ticks:{font:{size:11}},grid:{color:gc}},x:{ticks:{font:{size:11}},grid:{display:false}}}}});document.getElementById('mdLogs').innerHTML=`<div style="font-size:12px;color:var(--text2);margin-bottom:10px;display:flex;align-items:center;gap:6px"><span style="width:12px;height:3px;background:#1D9E75;display:inline-block;border-radius:2px"></span>${t('max_kg_per_session')}</div>`+buildLogList(logs,isCardio,name);}
   else if(logs.length>=2&&isCardio){wrap.style.display='block';dChart=new Chart(document.getElementById('mdCanvas'),{type:'bar',data:{labels:logs.map(l=>'S'+l.week),datasets:[{data:logs.map(l=>parseFloat((l.sets||[{val:0}])[0].val)||0),backgroundColor:'rgba(29,158,117,.7)',borderRadius:6}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{ticks:{font:{size:11}},grid:{color:gc}},x:{ticks:{font:{size:11}},grid:{display:false}}}}});document.getElementById('mdLogs').innerHTML=buildLogList(logs,isCardio,name);}
@@ -2221,7 +2397,7 @@ function buildLogList(logs,isCardio,exerciseName){
         ?(l.sets||[]).map(s=>s.val+' min').join(', ')
         :(l.sets||[]).map(s=>{
             const dispVal=exUnit==='lb'?kgToDisplay(parseFloat(s.val)||0,'lb'):parseFloat(s.val)||0;
-            return `${dispVal}${exUnit}×${s.reps||'—'}${s.approx?'<span class="approx-badge">Aprox</span>':''}${s.perSide?'<span class="approx-badge" style="color:var(--green);border-color:var(--green)">×2 lados</span>':''}`;
+            return `${dispVal}${exUnit}×${s.reps||'—'}${s.approx?'<span class="approx-badge">'+t('approx_badge')+'</span>':''}${s.perSide?'<span class="approx-badge" style="color:var(--green);border-color:var(--green)">'+t('x2_sides')+'</span>':''}`;
           }).join(' | ');
       return `<div class="hrow"><span class="wchip">S${l.week}</span><span style="flex:1;font-size:13px">${disp}</span><span class="mu" style="font-size:12px">${l.date||''}</span><button class="btn btnsm" onclick="openEditM('${key}')" style="margin-left:4px"><i class="ti ti-edit"></i></button></div>`;
     }).join('');
@@ -2233,7 +2409,7 @@ function buildLogList(logs,isCardio,exerciseName){
 function renderHistory(){
   const q=(document.getElementById('srch')||{value:''}).value.toLowerCase().trim();
   const muscles=new Set();Object.values(db.plans).filter(p=>p&&p.loaded).forEach(p=>p.days.forEach(d=>d.sections.forEach(s=>s.exercises.forEach(e=>{if(e.muscle!=='Calentamiento')muscles.add(e.muscle)}))));
-  const fEl=document.getElementById('mfBtns');if(fEl)fEl.innerHTML=`<button class="dtab ${mFilter===''?'active':''}" onclick="setMF('')">${t('all_filter')}</button>`+[...muscles].map(m=>`<button class="dtab ${mFilter===m?'active':''}" onclick="setMF('${m}')">${m}</button>`).join('');
+  const fEl=document.getElementById('mfBtns');if(fEl)fEl.innerHTML=`<button class="dtab ${mFilter===''?'active':''}" onclick="setMF('')">${t('all_filter')}</button>`+[...muscles].map(m=>`<button class="dtab ${mFilter===m?'active':''}" onclick="setMF('${m}')">${tMuscle(m)}</button>`).join('');
   const exMap={};Object.values(db.plans).filter(p=>p&&p.loaded).forEach(p=>p.days.forEach(d=>d.sections.forEach(s=>s.exercises.forEach(e=>{if(e.muscle==='Calentamiento')return;if(!exMap[e.name])exMap[e.name]={name:e.name,muscle:e.muscle,isCardio:e.isCardio,weeks:[]};if(!exMap[e.name].weeks.includes(p.week))exMap[e.name].weeks.push(p.week);}))));
   const filtered=Object.values(exMap).filter(e=>(!q||e.name.toLowerCase().includes(q))&&(!mFilter||e.muscle===mFilter)).sort((a,b)=>a.name.localeCompare(b.name));
   const el=document.getElementById('histList');
@@ -2256,7 +2432,7 @@ function renderHistory(){
       .sort((a,b)=>b.week-a.week)[0];
     const fbSnippet=latestFb?`<div style="margin-top:4px;font-size:11px;color:#92400E;background:rgba(245,158,11,.1);border-radius:5px;padding:3px 7px;display:flex;align-items:center;gap:4px;max-width:100%;overflow:hidden"><i class="ti ti-message-star" style="font-size:11px;color:#F59E0B;flex-shrink:0"></i><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${latestFb.text.slice(0,50)}${latestFb.text.length>50?'…':''}</span><span style="flex-shrink:0;color:var(--text2)"> S${latestFb.week}</span></div>`:'';
     return `<div class="hlist-row" onclick="openDetailM('${e.name.replace(/'/g,"\\'")}','${e.muscle}',${e.isCardio})">
-      <div style="flex:1;min-width:0"><div class="hlist-name">${e.name}</div><div class="hlist-meta"><span class="bdg ${bc}">${e.muscle}</span>${e.weeks.map(w=>`<span class="wchip">S${w}</span>`).join('')}${logs.length?`<span style="font-size:11px;color:var(--text2)">${logs.length} ${t('records_count')}</span>`:''}</div>${fbSnippet}</div>
+      <div style="flex:1;min-width:0"><div class="hlist-name">${tEx(e.name)}</div><div class="hlist-meta"><span class="bdg ${bc}">${tMuscle(e.muscle)}</span>${e.weeks.map(w=>`<span class="wchip">S${w}</span>`).join('')}${logs.length?`<span style="font-size:11px;color:var(--text2)">${logs.length} ${t('records_count')}</span>`:''}</div>${fbSnippet}</div>
       <div class="hlist-right">${lastDisp?`<span style="font-size:14px;font-weight:700">${lastDisp}</span>`:`<span style="font-size:12px;color:var(--text2)">${t('no_data_label')}</span>`}${progBadge}<span style="font-size:11px;color:var(--text2)">${t('see_more')}</span></div>
     </div>`;
   }).join('');
@@ -2372,6 +2548,15 @@ function waitForFirebase(){
   });
 }
 
+// Writes the login-screen texts in the current language and mode (login/register)
+function refreshLoginTexts(){
+  document.getElementById('loginTitle').textContent=isRegisterMode?t('register_title'):t('login_title');
+  document.getElementById('loginSub').textContent=isRegisterMode?t('register_sub'):t('login_sub');
+  document.getElementById('loginSubmitBtn').textContent=isRegisterMode?t('register_title'):t('login_title');
+  document.getElementById('toggleText').textContent=isRegisterMode?t('have_account'):t('no_account');
+  document.getElementById('toggleLink').textContent=isRegisterMode?t('login_link'):t('register_link');
+}
+
 function toggleAuthMode(){
   isRegisterMode=!isRegisterMode;
   document.getElementById('loginTitle').textContent=isRegisterMode?t('register_title'):t('login_title');
@@ -2392,18 +2577,18 @@ function hideLoginError(){document.getElementById('loginError').style.display='n
 
 function translateAuthError(code){
   const map={
-    'auth/invalid-email':'Correo electrónico inválido.',
-    'auth/user-disabled':'Esta cuenta ha sido deshabilitada.',
-    'auth/user-not-found':'No existe una cuenta con ese correo.',
-    'auth/wrong-password':'Contraseña incorrecta.',
-    'auth/invalid-credential':'Correo o contraseña incorrectos.',
-    'auth/email-already-in-use':'Ya existe una cuenta con ese correo.',
-    'auth/weak-password':'La contraseña debe tener al menos 6 caracteres.',
-    'auth/missing-password':'Ingresa una contraseña.',
-    'auth/too-many-requests':'Demasiados intentos. Espera un momento e intenta de nuevo.',
-    'auth/network-request-failed':'Error de conexión. Verifica tu internet.'
+    'auth/invalid-email':'auth_invalid_email',
+    'auth/user-disabled':'auth_user_disabled',
+    'auth/user-not-found':'auth_user_not_found',
+    'auth/wrong-password':'auth_wrong_password',
+    'auth/invalid-credential':'auth_invalid_credential',
+    'auth/email-already-in-use':'auth_email_in_use',
+    'auth/weak-password':'auth_weak_password',
+    'auth/missing-password':'auth_missing_password',
+    'auth/too-many-requests':'auth_too_many',
+    'auth/network-request-failed':'auth_network'
   };
-  return map[code]||'Ocurrió un error. Intenta de nuevo.';
+  return t(map[code]||'auth_generic');
 }
 
 async function handleAuthSubmit(){
@@ -2577,8 +2762,8 @@ async function verifyAdminKey(){
     const ref=window.fbDoc(window.fbDb,'admin','config');
     const snap=await window.fbGetDoc(ref);
     if(!snap.exists()){
-      errEl.textContent='Configuración de admin no encontrada.';errEl.style.display='block';
-      btn.disabled=false;btn.textContent='Entrar';return;
+      errEl.textContent=t('admin_cfg_missing');errEl.style.display='block';
+      btn.disabled=false;btn.textContent=t('admin_enter');return;
     }
     const correctKey=snap.data().adminKey;
     if(entered===String(correctKey)){
@@ -2586,12 +2771,12 @@ async function verifyAdminKey(){
       closeM('mdAdminKey');
       showAdminPanel();
     }else{
-      errEl.textContent='Clave incorrecta.';errEl.style.display='block';
+      errEl.textContent=t('admin_key_wrong');errEl.style.display='block';
     }
   }catch(e){
-    errEl.textContent='Error verificando clave: '+e.message;errEl.style.display='block';
+    errEl.textContent=t('admin_key_error')+e.message;errEl.style.display='block';
   }
-  btn.disabled=false;btn.textContent='Entrar';
+  btn.disabled=false;btn.textContent=t('admin_enter');
 }
 
 async function showAdminPanel(){
@@ -2644,12 +2829,12 @@ async function showAdminPanel(){
     });
 
     if(users.length===0){
-      document.getElementById('adminContent').innerHTML='<div class="mu" style="text-align:center;padding:24px">Sin usuarios registrados aún.</div>';
+      document.getElementById('adminContent').innerHTML='<div class="mu" style="text-align:center;padding:24px">'+t('admin_no_users')+'</div>';
       return;
     }
     renderAdminContent(users);
   }catch(e){
-    document.getElementById('adminContent').innerHTML=`<div style="color:var(--red);padding:16px;font-size:13px">Error cargando datos: ${e.message}</div>`;
+    document.getElementById('adminContent').innerHTML=`<div style="color:var(--red);padding:16px;font-size:13px">${t('admin_load_error')}${e.message}</div>`;
     console.error('Admin panel error:',e);
   }
 }
@@ -2687,32 +2872,32 @@ function renderAdminContent(users){
 
   const statsHtml=`
     <div class="admin-stats">
-      <div class="admin-stat"><div class="admin-stat-val">${totalUsers}</div><div class="admin-stat-lbl">Usuarios</div></div>
-      <div class="admin-stat"><div class="admin-stat-val">${totalSessions}</div><div class="admin-stat-lbl">Sesiones</div></div>
-      <div class="admin-stat"><div class="admin-stat-val">${activeThisWeek}</div><div class="admin-stat-lbl">Activos 7d</div></div>
+      <div class="admin-stat"><div class="admin-stat-val">${totalUsers}</div><div class="admin-stat-lbl">${t('admin_users')}</div></div>
+      <div class="admin-stat"><div class="admin-stat-val">${totalSessions}</div><div class="admin-stat-lbl">${t('admin_sessions')}</div></div>
+      <div class="admin-stat"><div class="admin-stat-val">${activeThisWeek}</div><div class="admin-stat-lbl">${t('admin_active7')}</div></div>
     </div>
 
     <!-- Admin tool: unit relabeling -->
     <div style="border:1px solid rgba(245,158,11,.4);border-radius:var(--radius-sm);padding:14px;margin-bottom:14px;background:rgba(245,158,11,.05)">
       <div style="font-size:13px;font-weight:700;color:#92400E;margin-bottom:6px;display:flex;align-items:center;gap:6px">
-        <i class="ti ti-switch-2" style="font-size:15px"></i> Corrección de unidades (mis datos)
+        <i class="ti ti-switch-2" style="font-size:15px"></i> ${t('admin_units_title')}
       </div>
       <div style="font-size:12px;color:var(--text2);margin-bottom:10px;line-height:1.5">
-        Corrige pesos de ejercicios ingresados en lb pero guardados como kg.<br>
-        El número que ves no cambia. El peso corporal no se toca.
+        ${t('admin_units_desc1')}<br>
+        ${t('admin_units_desc2')}
       </div>
       <div style="display:flex;gap:8px">
         <button class="btn btnsm" style="flex:1;font-size:12px;background:rgba(245,158,11,.15);border-color:rgba(245,158,11,.4);color:#92400E" onclick="adminRelabelUnits('kg','lb')">
-          <i class="ti ti-arrow-right"></i> Mis pesos son lb → corregir
+          <i class="ti ti-arrow-right"></i> ${t('admin_units_fix')}
         </button>
         <button class="btn btnsm" style="flex:1;font-size:12px;background:rgba(245,158,11,.15);border-color:rgba(245,158,11,.4);color:#92400E" onclick="adminRelabelUnits('lb','kg')">
-          <i class="ti ti-arrow-left"></i> Revertir corrección
+          <i class="ti ti-arrow-left"></i> ${t('admin_units_revert')}
         </button>
       </div>
       <div id="relabelStatus" style="font-size:12px;margin-top:8px;color:var(--text2);min-height:16px"></div>
     </div>
 
-    <div style="font-size:13px;font-weight:600;margin-bottom:10px;color:var(--text2);text-transform:uppercase;letter-spacing:.05em">Usuarios registrados</div>`;
+    <div style="font-size:13px;font-weight:600;margin-bottom:10px;color:var(--text2);text-transform:uppercase;letter-spacing:.05em">${t('admin_registered')}</div>`;
 
   document.getElementById('adminContent').innerHTML=statsHtml+'<div id="adminUserList"></div>';
   renderAdminUserList(users);
@@ -2722,7 +2907,7 @@ function renderAdminUserList(users, isFiltered=false){
   const listEl=document.getElementById('adminUserList');
   if(!listEl)return;
   if(!users.length){
-    listEl.innerHTML=`<div class="mu" style="text-align:center;padding:20px">${isFiltered?'Sin resultados para esa búsqueda.':'Sin usuarios aún.'}</div>`;
+    listEl.innerHTML=`<div class="mu" style="text-align:center;padding:20px">${isFiltered?t('admin_no_results'):t('admin_no_users_short')}</div>`;
     return;
   }
   let html='';
@@ -2733,8 +2918,8 @@ function renderAdminUserList(users, isFiltered=false){
     const fullName=((u.firstName||'')+' '+(u.lastName||'')).trim();
     const initials=fullName?(fullName.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase()):(u.email&&u.email!=='—'?u.email[0].toUpperCase():'?');
     const sessionBadge=u.historical
-      ?`<span style="font-size:10px;background:var(--bg3);color:var(--text2);padding:2px 6px;border-radius:4px;font-weight:500">Sin sesiones registradas aún</span>`
-      :`${u.sessionCount||0} sesiones · Registro: ${first}`;
+      ?`<span style="font-size:10px;background:var(--bg3);color:var(--text2);padding:2px 6px;border-radius:4px;font-weight:500">${t('admin_no_sessions')}</span>`
+      :`${u.sessionCount||0} ${t('admin_sessions_reg')} ${first}`;
     html+=`
       <div class="admin-user-card">
         <div class="admin-user-header">
@@ -2747,15 +2932,15 @@ function renderAdminUserList(users, isFiltered=false){
         </div>
         ${!u.historical?`
         <div class="admin-user-meta">
-          <span class="admin-meta-item"><i class="ti ti-clock"></i> Último acceso: ${last}</span>
-          <span class="admin-meta-item"><i class="ti ti-refresh"></i> ${u.sessionCount||0} accesos</span>
+          <span class="admin-meta-item"><i class="ti ti-clock"></i> ${t('admin_last_access')} ${last}</span>
+          <span class="admin-meta-item"><i class="ti ti-refresh"></i> ${u.sessionCount||0} ${t('admin_accesses')}</span>
         </div>`:''}
         <div class="flex-row" style="gap:8px;margin-top:10px">
           <button class="btn btnsm" style="flex:1;font-size:12px;${!u.email||u.email==='—'?'opacity:.4;pointer-events:none':''}" onclick="adminSendPasswordReset('${u.email||''}')">
-            <i class="ti ti-mail"></i> Reset contraseña
+            <i class="ti ti-mail"></i> ${t('admin_reset_pw')}
           </button>
           <button class="btn btnsm btnd" style="font-size:12px" onclick="adminDeleteUser('${u.uid}','${emailDisplay}')">
-            <i class="ti ti-user-x"></i> Eliminar
+            <i class="ti ti-user-x"></i> ${t('admin_delete')}
           </button>
         </div>
       </div>`;
@@ -2781,12 +2966,12 @@ async function adminRelabelUnits(fromUnit, toUnit){
   // Body weight is NOT touched — only exercise logs.
 
   const statusEl=document.getElementById('relabelStatus');
-  if(statusEl) statusEl.textContent='Procesando...';
+  if(statusEl) statusEl.textContent=t('processing');
 
   const isFixing = toUnit==='lb';
   const confirmMsg = isFixing
-    ? `¿Corregir pesos de ejercicios?\n\nLos pesos que ingresaste en lb (ej: 90) se ajustarán para que se vean como "90 lb".\n\nNO afecta tu peso corporal.\nEsta acción no se puede deshacer fácilmente.`
-    : `¿Revertir corrección de unidades?\n\nInvierte el ajuste anterior. Útil si algo salió mal.\n\nNO afecta tu peso corporal.`;
+    ? t('admin_confirm_fix')
+    : t('admin_confirm_revert');
 
   if(!confirm(confirmMsg)){
     if(statusEl) statusEl.textContent='';
@@ -2810,10 +2995,11 @@ async function adminRelabelUnits(fromUnit, toUnit){
       });
     });
 
-    // Update only the exercise unit preference — body weight unchanged
+    // Update only the exercise unit preference.
+    // ALWAYS keep unitBodyWeight as kg — this function must never affect body weight display.
     db.settings=db.settings||{};
     db.settings.unitExercises=toUnit;
-    // db.settings.unitBodyWeight is intentionally NOT changed
+    db.settings.unitBodyWeight='kg';
 
     await lsaveNow();
 
@@ -2822,7 +3008,7 @@ async function adminRelabelUnits(fromUnit, toUnit){
     if(aplan) renderDay(aday);
     renderHistory();
 
-    const msg=`✓ ${setsChanged} sets ajustados. Ahora en ${toUnit}. Peso corporal sin cambios.`;
+    const msg=tf('admin_units_done',{n:setsChanged,u:toUnit});
     if(statusEl) statusEl.innerHTML=`<span style="color:var(--green)">${msg}</span>`;
     notif(msg);
   }catch(e){
@@ -2833,17 +3019,17 @@ async function adminRelabelUnits(fromUnit, toUnit){
 
 async function adminSendPasswordReset(email){
   if(!email)return;
-  if(!confirm(`¿Enviar email de reset de contraseña a ${email}?`))return;
+  if(!confirm(tf('admin_reset_confirm',{email})))return;
   try{
     await window.fbSendPasswordReset(window.fbAuth,email);
-    notif('✓ Email de reset enviado a '+email);
+    notif(tf('admin_reset_sent',{email}));
   }catch(e){
     alert('Error: '+e.message);
   }
 }
 
 async function adminDeleteUser(uid,email){
-  if(!confirm(`¿Eliminar la cuenta de ${email}?\n\nSus datos en Firestore serán borrados. La cuenta de autenticación quedará inactiva hasta que Firebase la limpie automáticamente.\n\nEsta acción no se puede deshacer.`))return;
+  if(!confirm(tf('admin_delete_confirm',{email})))return;
   try{
     // Delete user's gym data
     const userDataRef=window.fbDoc(window.fbDb,'users',uid);
@@ -2851,11 +3037,11 @@ async function adminDeleteUser(uid,email){
     // Delete user's session record
     const sessionRef=window.fbDoc(window.fbDb,'userSessions',uid);
     await window.fbDeleteDoc(sessionRef);
-    notif('✓ Datos de '+email+' eliminados');
+    notif(tf('admin_deleted',{email}));
     // Refresh the panel
     showAdminPanel();
   }catch(e){
-    alert('Error eliminando usuario: '+e.message);
+    alert(t('admin_delete_error')+e.message);
   }
 }
 
@@ -2956,7 +3142,7 @@ function updateUnitsModalUI(){
 
 function updateUnitsSuffix(){
   const s=document.getElementById('unitsSuffix');
-  if(s) s.textContent=`Ej: ${getUnitEx()} / Peso: ${getUnitBw()}`;
+  if(s) s.textContent=`${t('units_suffix_ex')}: ${getUnitEx()} / ${t('units_suffix_bw')}: ${getUnitBw()}`;
 }
 
 // ─── LANGUAGE ──────────────────────────────────────────────────────────────────
@@ -3168,6 +3354,7 @@ async function startApp(){
       db={plans:{},logs:{},weights:[],settings:{},coachFeedback:{}};
       document.getElementById('appWrap').style.display='none';
       document.getElementById('loginScreen').style.display='flex';
+      refreshLoginTexts();
     }
   });
 }
@@ -3250,11 +3437,7 @@ function showIOSInstallModal(variant){
 // Apply translations immediately on load (uses cached language) so the login
 // screen shows the right language even before Firebase/Firestore responds.
 applyStaticTranslations();
-document.getElementById('loginTitle').textContent=t('login_title');
-document.getElementById('loginSub').textContent=t('login_sub');
-document.getElementById('loginSubmitBtn').textContent=t('login_title');
-document.getElementById('toggleText').textContent=t('no_account');
-document.getElementById('toggleLink').textContent=t('register_link');
+refreshLoginTexts();
 
 startApp();
 </script>
